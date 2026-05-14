@@ -1,0 +1,65 @@
+import re
+
+from pydantic import BaseModel, field_validator
+
+# ─────────────────
+# 1. 로그인 스키마
+# ─────────────────
+class UserLogin(BaseModel):
+    """
+    로그인 시 입력받는 데이터의 규격과 형식을 검증합니다.
+    """
+    username : str
+    password : str
+
+    # ──────────────────────
+    # 1-1. 이메일 형식 검증
+    # ──────────────────────
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError("올바른 이메일 형식이 아닙니다.")
+        return v
+
+# ───────────────────
+# 2. 회원가입 스키마
+# ───────────────────
+class UserCreate(UserLogin):
+    """
+    로그인 스키마를 상속받아 이메일 검증을 유지하며,
+    추가 회원 정보와 비밀번호 복잡성 검사를 수행합니다.
+    """
+    student_name   : str
+    student_number : str
+    school_id      : int
+    dept_id        : int
+
+    # ──────────────────────────
+    # 2-1. 비밀번호 복잡성 검증
+    # ──────────────────────────
+    @field_validator("password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$', v):
+            raise ValueError("비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다.")
+        return v
+
+# ───────────────────
+# 3. 사용자 응답 스키마
+# ───────────────────
+class UserOut(BaseModel):
+    """
+    사용자 정보를 응답할 때 사용하는 데이터 구조입니다.
+    비밀번호는 절대 포함하지 않습니다.
+    """
+    user_id        : int
+    username       : str
+    student_name   : str
+    student_number : str
+    school_id      : int
+    dept_id        : int
+    is_active      : bool
+
+    model_config = {"from_attributes": True}
