@@ -1,0 +1,540 @@
+/* ==========================
+  login.css — 로그인 페이지
+  ========================== */
+
+/* ══════════════════════════
+  auth (Block) — 레이아웃
+  ══════════════════════════ */
+.auth {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - var(--nav-height));
+}
+
+/* ── auth__panel (Element) ── */
+.auth__panel--brand {
+  background: var(--text);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.auth__panel--brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(196, 94, 56, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 80% 70%, rgba(196, 94, 56, 0.10) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.auth__panel--brand::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(232, 228, 222, 0.15), transparent);
+}
+
+.auth__panel--form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  background: var(--bg);
+}
+
+/* ══════════════════════════
+  brand-panel (Block) — 왼쪽 브랜딩 내부
+  ══════════════════════════ */
+.brand-panel {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  width: 100%;
+}
+
+.brand-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border: 1px solid rgba(232, 228, 222, 0.2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+}
+
+.brand-panel__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.brand-panel__title {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+.brand-panel__desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+/* ══════════════════════════
+  mini-terminal (Block)
+  ══════════════════════════ */
+.mini-terminal {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.mini-terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.mini-terminal__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.mini-terminal__dot--red    { background: #ff5f57; opacity: 0.7; }
+.mini-terminal__dot--yellow { background: #febc2e; opacity: 0.7; }
+.mini-terminal__dot--green  { background: #28c840; opacity: 0.7; }
+
+.mini-terminal__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 4px;
+}
+
+.mini-terminal__body {
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.mini-terminal__prompt { color: var(--accent); }
+.mini-terminal__cmd    { color: rgba(255, 255, 255, 0.85); }
+.mini-terminal__out    { color: rgba(255, 255, 255, 0.3); }
+.mini-terminal__ok     { color: #7ecb9a; }
+
+.mini-terminal__line--gap {
+  margin-top: 0.25rem;
+}
+
+.mini-terminal__cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ══════════════════════════
+  stat-group (Block)
+  ══════════════════════════ */
+.stat-group {
+  display: flex;
+  align-items: center;
+}
+
+.stat-group__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-group__num {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.stat-group__unit {
+  font-size: 13px;
+  color: var(--accent);
+  margin-left: 1px;
+}
+
+.stat-group__label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.03em;
+}
+
+.stat-group__divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 1.25rem;
+}
+
+/* ══════════════════════════
+  login-form (Block) — 오른쪽 폼 내부
+  ══════════════════════════ */
+.login-form {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-form__header {
+  margin-bottom: 2rem;
+}
+
+.login-form__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.login-form__title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 0.375rem;
+}
+
+.login-form__sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login-form__alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 1.25rem;
+  background: rgba(196, 94, 56, 0.08);
+  border: 1px solid rgba(196, 94, 56, 0.25);
+  color: var(--accent);
+}
+
+.login-form__alert-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.login-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  margin-bottom: 1.25rem;
+}
+
+.login-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-form__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+
+.login-form__label--focused {
+  color: var(--accent);
+}
+
+.login-form__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-form__forgot {
+  font-size: 12px;
+  color: var(--accent);
+  transition: opacity 0.15s;
+}
+
+.login-form__forgot:hover {
+  opacity: 0.7;
+}
+
+.login-form__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-form__input-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  color: var(--text-dim);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.login-form__input {
+  width: 100%;
+  padding: 11px 12px 11px 38px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.login-form__input::placeholder {
+  color: var(--text-dim);
+}
+
+.login-form__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(196, 94, 56, 0.08);
+}
+
+.login-form__pw-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.login-form__pw-toggle:hover {
+  color: var(--text-muted);
+}
+
+.login-form__options {
+  margin-top: -0.25rem;
+}
+
+.login-form__checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.login-form__checkbox-wrap input[type="checkbox"] {
+  display: none;
+}
+
+.login-form__checkbox-box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-em);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.login-form__checkbox-wrap input:checked + .login-form__checkbox-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.login-form__checkbox-wrap input:checked + .login-form__checkbox-box::after {
+  content: "✓";
+  font-size: 10px;
+  color: white;
+  font-weight: 700;
+}
+
+.login-form__checkbox-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.login-form__submit {
+  width: 100%;
+  padding: 13px 24px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.1s;
+  margin-top: 0.25rem;
+}
+
+.login-form__submit:hover {
+  opacity: 0.88;
+}
+
+.login-form__submit:active {
+  transform: scale(0.98);
+}
+
+.login-form__submit--loading .login-form__submit-text {
+  opacity: 0.6;
+}
+
+.login-form__submit--loading .login-form__submit-arrow {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-form__submit-arrow {
+  font-size: 16px;
+  transition: transform 0.15s;
+}
+
+.login-form__submit:hover .login-form__submit-arrow {
+  transform: translateX(3px);
+}
+
+.login-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 1.25rem;
+  font-size: 13px;
+}
+
+.login-form__footer-text {
+  color: var(--text-muted);
+}
+
+.login-form__footer-link {
+  color: var(--accent);
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.login-form__footer-link:hover {
+  opacity: 0.75;
+}
+
+.login-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.25rem 0;
+}
+
+.login-form__divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.login-form__divider-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.login-form__back-btn {
+  width: 100%;
+  padding: 11px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: block;
+}
+
+.login-form__back-btn:hover {
+  border-color: var(--border-em);
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* ══════════════════
+  반응형
+  ══════════════════ */
+@media (max-width: 768px) {
+  .auth {
+    grid-template-columns: 1fr;
+  }
+
+  .auth__panel--brand {
+    display: none;
+  }
+
+  .auth__panel--form {
+    padding: 2.5rem 1.25rem;
+    align-items: flex-start;
+  }
+}
