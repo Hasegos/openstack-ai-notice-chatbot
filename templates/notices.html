@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    {% include "partials/head_meta.html" %}
+    <title>공지 목록 — 공지봇</title>
+    <link rel="stylesheet" href="/static/css/notices.css">
+</head>
+<body>
+
+    <!-- ── 네비게이션 ── -->
+    {% include "partials/header.html" %}
+
+    <main class="notices">
+
+        <!-- 사이드바 — 필터 -->
+        <aside class="notices__sidebar">
+
+            <div class="notices__filter-group">
+                <p class="notices__filter-label">분류</p>
+                <button class="notices__filter-btn notices__filter-btn--active" data-filter="all">
+                전체 공지
+                </button>
+                <button class="notices__filter-btn" data-filter="school">
+                학교 공지
+                </button>
+                <button class="notices__filter-btn" data-filter="dept">
+                학과 공지
+                </button>
+            </div>
+
+            <div class="notices__filter-group">
+                <p class="notices__filter-label">내 정보</p>
+                <div class="notices__user-badge">
+                <span class="notices__user-school">{{ current_user.school.school_name }}</span>
+                {% if current_user.department %}
+                    <span class="notices__user-dept">{{ current_user.department.dept_name }}</span>
+                {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- 메인 — 공지 목록 -->
+        <section class="notices__main">
+
+        <!-- 헤더 -->
+        <div class="notices__header">
+            <h1 class="notices__title">공지사항</h1>
+            <p class="notices__sub">{{ current_user.school.school_name }} 공지사항을 확인하세요</p>
+        </div>
+
+        <!-- 검색 -->
+        <div class="notices__search-wrap">
+            <div class="notices__search">
+                <span class="notices__search-icon">🔍</span>
+                <input
+                    type="text"
+                    class="notices__search-input"
+                    id="search-input"
+                    placeholder="공지사항 검색..."
+                />
+            </div>
+        </div>
+
+        <!-- 공지 목록 -->
+        <div class="notices__list" id="notices-list">
+            <!-- JS로 동적 렌더링 -->
+        </div>
+
+        <!-- 로딩 -->
+        <div class="notices__loading" id="notices-loading">
+            <div class="notices__loading-dot"></div>
+            <div class="notices__loading-dot"></div>
+            <div class="notices__loading-dot"></div>
+        </div>
+
+        <!-- 빈 상태 -->
+        <div class="notices__empty" id="notices-empty" style="display:none;">
+            <div class="notices__empty-icon">📭</div>
+            <p class="notices__empty-text">등록된 공지사항이 없습니다.</p>
+            <p class="notices__empty-sub">n8n 크롤링 워크플로우가 실행되면 자동으로 수집됩니다.</p>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="notices__pagination" id="notices-pagination"></div>
+
+        </section>
+
+    </main>
+
+    <!-- ── 공지 상세 모달 ── -->
+    <div class="notice-modal" id="notice-modal" style="display:none;">
+        <div class="notice-modal__backdrop" id="modal-backdrop"></div>
+        <div class="notice-modal__box">
+        <div class="notice-modal__header">
+            <div class="notice-modal__meta">
+            <span class="notice-modal__tag" id="modal-tag"></span>
+            <span class="notice-modal__date" id="modal-date"></span>
+            </div>
+            <button class="notice-modal__close" id="modal-close">✕</button>
+        </div>
+        <h2 class="notice-modal__title" id="modal-title"></h2>
+        <div class="notice-modal__summary" id="modal-summary"></div>
+        <div class="notice-modal__content" id="modal-content"></div>
+        <div class="notice-modal__footer">
+            <a class="notice-modal__link" id="modal-link" href="#" target="_blank" rel="noopener">
+            원문 보기 →
+            </a>
+            <a class="notice-modal__chat-btn" href="/chat">
+            💬 공지봇에게 질문하기
+            </a>
+        </div>
+        </div>
+    </div>
+
+    <!-- ── 푸터 ── -->
+    {% include "partials/footer.html" %}
+
+    <script src="/static/js/apiClient.js"></script>
+    <script src="/static/js/notices.js"></script>
+</body>
+</html>
