@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    {% include "partials/head_meta.html" %}
+    <title>오류 — 공지봇</title>
+    <link rel="stylesheet" href="/static/css/error.css">
+</head>
+<body>
+
+    <!-- ── 네비게이션 ── -->
+    {% include "partials/header.html" %}
+
+    <main class="error-page">
+        <div class="error-page__box">
+
+            <!-- 터미널 스타일 에러 표시 -->
+            <div class="error-page__terminal">
+                <div class="error-page__terminal-bar">
+                    <div class="error-page__dot error-page__dot--red"></div>
+                    <div class="error-page__dot error-page__dot--yellow"></div>
+                    <div class="error-page__dot error-page__dot--green"></div>
+                    <span class="error-page__terminal-title">noticebot — error</span>
+                </div>
+                <div class="error-page__terminal-body">
+                    <div>
+                    <span class="error-page__prompt">system</span>
+                    <span class="error-page__cmd"> $ status --check</span>
+                    </div>
+                    <div class="error-page__out">  → 요청 처리 중 오류가 발생했습니다...</div>
+                    <div class="error-page__err">  ✗ ERROR {{ status_code }}: {{ detail }}</div>
+                    <div class="error-page__gap">
+                    <span class="error-page__prompt">system</span>
+                    <span class="error-page__cmd"> $&nbsp;</span>
+                    <span class="error-page__cursor"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 에러 코드 -->
+            <div class="error-page__code">{{ status_code }}</div>
+
+            <!-- 에러 메시지 -->
+            <h1 class="error-page__title">
+                {% if status_code == 404 %}
+                    페이지를 찾을 수 없습니다
+                {% elif status_code == 403 %}
+                    접근 권한이 없습니다
+                {% elif status_code == 500 %}
+                    서버 오류가 발생했습니다
+                {% else %}
+                    오류가 발생했습니다
+            {% endif %}
+            </h1>
+
+            <p class="error-page__desc">{{ detail }}</p>
+
+            <!-- 액션 버튼 -->
+            <div class="error-page__actions">
+                <a href="/" class="btn btn--cta btn--cta-main">
+                    🏠 메인으로 돌아가기
+                </a>
+                <button class="btn btn--cta btn--cta-outline" onclick="history.back()">
+                    ← 이전 페이지
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ── 푸터 ── -->
+    {% include "partials/footer.html" %}
+
+</body>
+</html>
