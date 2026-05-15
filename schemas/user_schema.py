@@ -42,8 +42,50 @@ class UserCreate(UserLogin):
     @field_validator("password")
     @classmethod
     def password_complexity(cls, v: str) -> str:
-        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$', v):
+        password_regex = r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$'
+        if not re.match(password_regex, v):
             raise ValueError("비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다.")
+        return v
+
+    # ──────────────────────────
+    # 2-2. 이름 검증
+    # ──────────────────────────
+    @field_validator("student_name")
+    @classmethod
+    def validate_student_name(cls, v: str) -> str:
+        v = v.strip()
+        
+        if not v:
+            raise ValueError("이름을 입력해주세요.")
+
+        if len(v) < 2 or len(v) > 30:
+            raise ValueError("이름은 2자 이상 30자 이하로 입력해주세요.")
+
+        # 한글, 영문, 공백만 허용
+        if not re.match(r'^[가-힣a-zA-Z\s]+$', v):
+            raise ValueError("이름은 한글 또는 영문만 입력 가능합니다.")
+
+        # SQL 인젝션 패턴 차단
+        sql_injection_pattern = r"(--|;|'|\"|\/\*|\*\/|xp_|UNION|SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)"
+        if re.search(sql_injection_pattern, v, re.IGNORECASE):
+            raise ValueError("허용되지 않는 문자가 포함되어 있습니다.")
+    
+        return v
+
+    # ──────────────────────────
+    # 2-3. 학번 검증
+    # ──────────────────────────
+    @field_validator("student_number")
+    @classmethod
+    def validate_student_number(cls, v: str) -> str:
+        v = v.strip()
+
+        if not v:
+            raise ValueError("학번을 입력해주세요.")
+        
+        if not re.match(r'^\d{6,12}$', v):
+            raise ValueError("학번은 숫자 6~12자리로 입력해주세요.")
+            
         return v
 
 # ───────────────────

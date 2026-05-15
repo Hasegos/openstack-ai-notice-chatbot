@@ -15,6 +15,6 @@ class Department(Base):
     is_active  : Mapped[bool]           = mapped_column(Boolean, nullable=False, default=False)
 
     # relationships
-    school  : Mapped["School"]       = relationship(back_populates="department")
+    school  : Mapped["School"]       = relationship(back_populates="departments")
     users   : Mapped[List["User"]]   = relationship(back_populates="department")
     notices : Mapped[List["Notice"]] = relationship(back_populates="department")
