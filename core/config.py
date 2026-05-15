@@ -10,9 +10,16 @@ class Settings(BaseSettings):
     POSTGRESQL_PORT: str
     POSTGRESQL_DATABASE: str
     PROJECT_NAME:str = "openstack LLM AI 챗봇"
+
+    # ──────────────────────
+    # 2. 보안 및 인증 (JWT)
+    # ──────────────────────
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
     
     # ──────────────────────────
-    # 11. 계산된 프로퍼티 (DB URL)
+    # 3. 계산된 프로퍼티 (DB URL)
     # ──────────────────────────
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
@@ -26,7 +33,7 @@ class Settings(BaseSettings):
         )
     
     # ──────────────────────────
-    # 12. 환경 설정 로드 구성
+    # 4. 환경 설정 로드 구성
     # ──────────────────────────
     model_config = SettingsConfigDict(
         env_file = ".env",
@@ -34,6 +41,6 @@ class Settings(BaseSettings):
     )
 
 # ───────────────────
-# 13. 설정 객체 인스턴스화
+# 5. 설정 객체 인스턴스화
 # ───────────────────
 settings = Settings()
