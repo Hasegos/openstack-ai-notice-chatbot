@@ -1,11 +1,12 @@
-from fastapi import FastAPI , Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from db.session import engine
 from db.base import Base
 from core.config import settings
+from core.exception import install_errors
 from api.routers import api_router
-from core.templates import templates
+from api.pages import page_router
 
 # ────────────────────────────
 # 1. 데이터베이스 테이블 초기화
@@ -16,7 +17,11 @@ Base.metadata.create_all(bind=engine)
 # ────────────────────────────
 # 2. FastAPI 앱 인스턴스 설정
 # ────────────────────────────
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    docs_url=None,
+    redoc_url=None
+)
 
 # ──────────────────────────
 # 3. 정적 파일 및 라우터 설정
@@ -26,23 +31,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 3-2. API 라우터 포함 (로그인, 회원가입, 대시보드 등)
 app.include_router(api_router)
+app.include_router(page_router)
 
-# ──────────────────────────
-# 메인 랜딩 페이지
-# ──────────────────────────
-@app.get("/")
-async def root(
-    request: Request
-):
-    """
-    메인 랜딩 페이지 렌더링.
-    로그인 상태 여부에 따라 nav 버튼을 동적으로 전환합니다.
-    """
-    return templates.TemplateResponse(
-        request=request,
-        name="home.html",
-        context={
-            "is_logged_in": False,
-            "schools": []
-        }
-    )
+# ───────────────────
+# 4. 예외 처리기 설치
+# ───────────────────
+# 커스텀 에러 핸들러(401, 404, 500 에러 처리 등)를 등록합니다.
+install_errors(app)
