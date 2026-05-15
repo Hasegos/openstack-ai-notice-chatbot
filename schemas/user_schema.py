@@ -97,7 +97,7 @@ class UserOut(BaseModel):
     비밀번호는 절대 포함하지 않습니다.
     """
     user_id        : int
-    username       : str
+    email       : str
     student_name   : str
     student_number : str
     school_id      : int
