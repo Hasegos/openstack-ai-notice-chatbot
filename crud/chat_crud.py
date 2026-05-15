@@ -94,3 +94,19 @@ def get_messages_by_session(
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
+
+# ────────────────────────────────────────
+# 6. 채팅 세션 삭제 (Delete)
+# ────────────────────────────────────────
+def delete_session(
+    db: Session,
+    session_id: int
+):
+    """
+    세션과 해당 세션의 모든 메시지를 삭제합니다.
+    메시지를 먼저 삭제 후 세션을 삭제합니다 (FK 제약 조건).
+    """
+    db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete()
+    db.query(ChatSession).filter(ChatSession.session_id == session_id).delete()
+
+    db.commit()

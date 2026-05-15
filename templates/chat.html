@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    {% include "partials/head_meta.html" %}
+    <title>채팅 — 공지봇</title>
+    <link rel="stylesheet" href="/static/css/chat.css">
+</head>
+<body>
+
+    <!-- ── 네비게이션 ── -->
+    {% include "partials/header.html" %}
+
+    <!-- ── 채팅 레이아웃 ── -->
+    <main class="chat">
+
+        <!-- 왼쪽: 사이드바 -->
+        <aside class="chat__sidebar">
+
+            <!-- 새 채팅 버튼 -->
+            <button class="chat__new-btn" id="new-chat-btn">
+                <span>＋</span>
+                새 채팅
+            </button>
+
+            <!-- 세션 목록 -->
+            <div class="chat__session-list" id="session-list">
+            <!-- JS로 동적 렌더링 -->
+            </div>
+
+            <!-- 사이드바 하단 사용자 정보 -->
+            <div class="chat__sidebar-footer">
+                <div class="chat__user-info">
+                    <span class="chat__user-icon">👤</span>
+                    <div class="chat__user-detail">
+                    <span class="chat__user-name">{{ current_user.student_name }}</span>
+                    <span class="chat__user-school">{{ current_user.school.school_name }}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 오른쪽: 채팅창 -->
+        <section class="chat__main">
+
+            <!-- 채팅 헤더 -->
+            <div class="chat__header">
+                <div class="chat__header-info">
+                    <span class="chat__header-title" id="chat-title">새 대화를 시작하세요</span>
+                    <span class="chat__header-badge">
+                        <span class="chat__header-dot"></span>
+                        {{ current_user.school.school_name }}
+                        {% if current_user.department %}
+                            · {{ current_user.department.dept_name }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- 메시지 목록 -->
+            <div class="chat__messages" id="chat-messages">
+
+            <!-- 웰컴 메시지 (세션 없을 때) -->
+            <div class="chat__welcome" id="chat-welcome">
+                <div class="chat__welcome-icon">🔔</div>
+                <h2 class="chat__welcome-title">공지봇에 오신 것을 환영합니다</h2>
+                <p class="chat__welcome-desc">
+                    학교·학과 공지사항에 대해 무엇이든 물어보세요.<br>
+                    AI가 관련 공지를 찾아 답변해드립니다.
+                </p>
+                <div class="chat__welcome-examples">
+                    <button class="chat__example-btn" data-msg="이번 학기 장학금 신청 언제까지야?">
+                        이번 학기 장학금 신청 언제까지야?
+                    </button>
+                    <button class="chat__example-btn" data-msg="수강신청 변경 기간이 언제야?">
+                        수강신청 변경 기간이 언제야?
+                    </button>
+                    <button class="chat__example-btn" data-msg="학과 행사 일정 알려줘">
+                        학과 행사 일정 알려줘
+                    </button>
+                </div>
+            </div>
+
+            </div>
+
+            <!-- 입력창 -->
+            <div class="chat__input-area">
+                <div class="chat__input-wrap">
+                    <textarea
+                    class="chat__input"
+                    id="chat-input"
+                    placeholder="공지사항에 대해 질문하세요..."
+                    rows="1"
+                    ></textarea>
+                    <button class="chat__send-btn" id="send-btn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="chat__input-hint">Enter로 전송, Shift+Enter로 줄바꿈</p>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="/static/js/apiClient.js"></script>
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>
