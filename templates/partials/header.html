@@ -1,24 +1,26 @@
 <header>
-    <nav>
-        <a href="/" class="nav-logo">
-            <span class="logo-icon">🔔</span>
+    <nav class="nav">
+        <a href="/" class="nav__logo">
+            <span class="nav__logo-icon">🔔</span>
             공지봇
         </a>
-        <div class="nav-actions">
-            {% if is_logged_in %}
-                <span class="nav-school-badge">
-                    {{ current_user.school.name }}
-                    {% if current_user.department %}
-                        <span class="nav-dept">· {{ current_user.department.name }}</span>
-                    {% endif %}
-                </span>
-                <a href="/notices" class="btn-ghost">공지 목록</a>
-                <a href="/chat" class="btn-ghost">채팅</a>
-                <a href="/logout" class="btn-nav-outline">로그아웃</a>
-            {% else %}
-                <a href="/login" class="btn-ghost">로그인</a>
-                <a href="/register" class="btn-nav-primary">무료 시작</a>
+        <div class="nav__actions">
+        {% if is_logged_in %}
+            <span class="nav__school-badge">
+            {{ current_user.school.name }}
+            {% if current_user.department %}
+                <span class="nav__dept">· {{ current_user.department.name }}</span>
             {% endif %}
+            </span>
+            <a href="/notices" class="btn btn--ghost">공지 목록</a>
+            <a href="/chat" class="btn btn--ghost">채팅</a>
+            <form action="/api/auth/logout" method="post">
+                <button type="submit" class="btn btn--nav-outline">로그아웃</button>
+            </form>
+        {% else %}
+            <a href="/login" class="btn btn--ghost">로그인</a>
+            <a href="/register" class="btn btn--nav-primary">무료 시작</a>
+        {% endif %}
         </div>
     </nav>
 </header>

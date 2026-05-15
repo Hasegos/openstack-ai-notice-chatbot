@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    {% include "partials/head_meta.html" %}
+    <title>로그인 — 공지봇</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+
+    <!-- ── 네비게이션 ── -->
+    {% include "partials/header.html" %}
+
+    <main class="auth">
+
+        <!-- 왼쪽: 브랜딩 패널 -->
+        <div class="auth__panel--brand">
+            <div class="brand-panel">
+
+                <!-- 배지 -->
+                <div class="brand-panel__badge">
+                    <span class="brand-panel__badge-dot"></span>
+                    AI NOTICE CHATBOT
+                </div>
+
+                <!-- 타이틀 -->
+                <h2 class="brand-panel__title">
+                    공지사항을<br>
+                    AI가 대신<br>
+                    읽어드립니다
+                </h2>
+
+                <!-- 설명 -->
+                <p class="brand-panel__desc">
+                    학교·학과 공지를 30분마다 자동 수집하고<br>
+                    Llama 3.1 70B가 핵심만 요약합니다.
+                </p>
+
+                <!-- 미니 터미널 데모 -->
+                <div class="mini-terminal">
+                    <div class="mini-terminal__bar">
+                        <div class="mini-terminal__dot mini-terminal__dot--red"></div>
+                        <div class="mini-terminal__dot mini-terminal__dot--yellow"></div>
+                        <div class="mini-terminal__dot mini-terminal__dot--green"></div>
+                        <span class="mini-terminal__title">noticebot — session</span>
+                    </div>
+                    <div class="mini-terminal__body">
+                        <div>
+                            <span class="mini-terminal__prompt">user@bot</span>
+                            <span class="mini-terminal__cmd"> $ 장학금 신청 마감 언제야?</span>
+                        </div>
+                        <div class="mini-terminal__out">  → 벡터 검색 중 (top-5)...</div>
+                        <div class="mini-terminal__ok">  ✓ 6월 20일(금) 18:00까지.</div>
+                        <div class="mini-terminal__line--gap">
+                            <span class="mini-terminal__prompt">user@bot</span>
+                            <span class="mini-terminal__cmd"> $&nbsp;</span>
+                            <span class="mini-terminal__cursor"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 서비스 스탯 -->
+                <div class="stat-group">
+                    <div class="stat-group__item">
+                        <span class="stat-group__num">30<span class="stat-group__unit">분</span></span>
+                        <span class="stat-group__label">자동 수집 주기</span>
+                    </div>
+                    <div class="stat-group__divider"></div>
+                    <div class="stat-group__item">
+                        <span class="stat-group__num">70<span class="stat-group__unit">B</span></span>
+                        <span class="stat-group__label">Llama 파라미터</span>
+                    </div>
+                    <div class="stat-group__divider"></div>
+                    <div class="stat-group__item">
+                        <span class="stat-group__num">100<span class="stat-group__unit">%</span></span>
+                        <span class="stat-group__label">로컬 운영</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽: 로그인 폼 -->
+        <div class="auth__panel--form">
+            <div class="login-form">
+
+                <!-- 폼 헤더 -->
+                <div class="login-form__header">
+                    <a href="/" class="login-form__logo">
+                    <span>🔔</span> 공지봇
+                    </a>
+                    <h1 class="login-form__title">다시 오셨군요</h1>
+                    <p class="login-form__sub">계정에 로그인하세요</p>
+                </div>
+
+                <!-- 에러 메시지 (JS로 표시) -->
+                <div class="login-form__alert" id="errorAlert" style="display:none;">
+                    <span class="login-form__alert-icon">⚠</span>
+                    <span id="errorMessage"></span>
+                </div>
+
+                <!-- 로그인 폼 -->
+                <form class="login-form__fields" id="login-form">
+
+                    <!-- 이메일 입력 -->
+                    <div class="login-form__group">
+                        <label class="login-form__label" for="email">이메일</label>
+                        <div class="login-form__input-wrap">
+                            <span class="login-form__input-icon">✉</span>
+                            <input
+                            type="email"
+                            id="email"
+                            name="username"
+                            class="login-form__input"
+                            placeholder="student@university.ac.kr"
+                            autocomplete="email"
+                            required
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 비밀번호 입력 + 표시/숨김 토글 -->
+                    <div class="login-form__group">
+                        <div class="login-form__label-row">
+                            <label class="login-form__label" for="password">비밀번호</label>
+                            <a href="#" class="login-form__forgot">비밀번호 찾기</a>
+                        </div>
+                        <div class="login-form__input-wrap">
+                            <span class="login-form__input-icon">🔒</span>
+                            <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="login-form__input"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                            required
+                            />
+                            <button type="button" class="login-form__pw-toggle" id="pw-toggle" aria-label="비밀번호 표시">
+                                <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 로그인 상태 유지 체크박스 -->
+                    <div class="login-form__options">
+                        <label class="login-form__checkbox-wrap">
+                            <input type="checkbox" name="remember" id="remember" />
+                            <span class="login-form__checkbox-box"></span>
+                            <span class="login-form__checkbox-label">로그인 상태 유지</span>
+                        </label>
+                    </div>
+
+                    <!-- 제출 버튼 -->
+                    <button type="submit" class="login-form__submit" id="submit-btn">
+                        <span class="login-form__submit-text">로그인</span>
+                        <span class="login-form__submit-arrow">→</span>
+                    </button>
+                </form>
+
+                <!-- 회원가입 유도 -->
+                <div class="login-form__footer">
+                    <span class="login-form__footer-text">아직 계정이 없으신가요?</span>
+                    <a href="/register" class="login-form__footer-link">무료로 시작하기 →</a>
+                </div>
+
+                <!-- 구분선 -->
+                <div class="login-form__divider">
+                    <span class="login-form__divider-line"></span>
+                    <span class="login-form__divider-text">또는</span>
+                    <span class="login-form__divider-line"></span>
+                </div>
+
+                <!-- 메인으로 돌아가기 -->
+                <a href="/" class="login-form__back-btn">← 메인으로 돌아가기</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- ── 푸터 ── -->
+    {% include "partials/footer.html" %}
+
+    <script src="/static/js/apiClient.js"></script>
+    <script src="/static/js/login.js"></script>
+</body>
+</html>

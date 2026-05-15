@@ -1,0 +1,122 @@
+/* ============================
+  error.css — 에러 페이지
+  ============================ */
+
+/* ══════════════════════════
+  error-page (Block)
+  ══════════════════════════ */
+.error-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--nav-height) - 56px);
+  padding: 3rem 2rem;
+}
+
+.error-page__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+}
+
+/* ── 터미널 ── */
+.error-page__terminal {
+  width: 100%;
+  background: var(--text);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.error-page__terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.error-page__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.error-page__dot--red    { background: #ff5f57; }
+.error-page__dot--yellow { background: #febc2e; }
+.error-page__dot--green  { background: #28c840; }
+
+.error-page__terminal-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 6px;
+}
+
+.error-page__terminal-body {
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 2;
+  text-align: left;
+}
+
+.error-page__prompt { color: var(--accent); }
+.error-page__cmd    { color: rgba(255, 255, 255, 0.8); }
+.error-page__out    { color: rgba(255, 255, 255, 0.35); }
+.error-page__err    { color: #ff6b6b; }
+.error-page__gap    { margin-top: 0.25rem; }
+
+.error-page__cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── 에러 코드 ── */
+.error-page__code {
+  font-family: var(--font-mono);
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  opacity: 0.2;
+  margin-top: -0.5rem;
+}
+
+/* ── 에러 메시지 ── */
+.error-page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-top: -1rem;
+}
+
+.error-page__desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ── 액션 버튼 ── */
+.error-page__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
