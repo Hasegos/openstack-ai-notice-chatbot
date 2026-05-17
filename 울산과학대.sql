@@ -6,5 +6,4 @@
 -- ================================================
 
 INSERT INTO schools (school_name, notice_url, is_active) VALUES
-
 ('울산과학대학교',  'https://www.uc.ac.kr/www/CMS/Board/Board.do?mCode=MN091', TRUE)
