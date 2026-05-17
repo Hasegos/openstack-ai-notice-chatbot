@@ -30,8 +30,21 @@ const modalLink   = document.getElementById("modal-link");
 async function init() {
     showLoading(true);
     try {
-        const data = await apiRequest("/api/notices?skip=0&limit=200", { method: "GET" });
-        allNotices = data || [];
+        const FETCH_SIZE = 100;
+        let skip = 0;
+        let fetched = [];
+        while (true) {
+            const data = await apiRequest(
+                `/api/notices?skip=${skip}&limit=${FETCH_SIZE}`,
+                { method: "GET" }
+            );
+            if (!data || data.length === 0) break;
+            fetched = fetched.concat(data);
+
+            if (data.length < FETCH_SIZE) break;
+            skip += FETCH_SIZE;
+        }
+        allNotices = fetched;
         applyFilter();
     } catch {
         showLoading(false);
@@ -46,11 +59,10 @@ async function init() {
  */
 function applyFilter() {
     filtered = allNotices.filter(notice => {
-        // 분류 필터
+
         if (currentFilter === "school" && notice.dept_id !== null) return false;
         if (currentFilter === "dept"   && notice.dept_id === null) return false;
 
-        // 검색 필터
         if (searchQuery) {
             const keyword = searchQuery.toLowerCase();
             const title   = (notice.title   || "").toLowerCase();
@@ -82,17 +94,14 @@ function render() {
 
     showEmpty(false);
 
-    // 페이지 슬라이싱
     const start = (currentPage - 1) * LIMIT;
     const page  = filtered.slice(start, start + LIMIT);
 
-    // 목록 렌더링
     noticesList.replaceChildren();
     page.forEach(notice => {
         noticesList.appendChild(createNoticeCard(notice));
     });
 
-    // 페이지네이션 렌더링
     renderPagination();
 }
 
@@ -105,7 +114,6 @@ function createNoticeCard(notice) {
     const card = document.createElement("div");
     card.className = "notice-card";
 
-    // 상단 (태그 + 날짜)
     const top = document.createElement("div");
     top.className = "notice-card__top";
 
@@ -122,12 +130,10 @@ function createNoticeCard(notice) {
     top.appendChild(tag);
     top.appendChild(date);
 
-    // 제목
     const title = document.createElement("div");
     title.className = "notice-card__title";
     title.textContent = notice.title || "제목 없음";
 
-    // 요약
     const summary = document.createElement("div");
     summary.className = "notice-card__summary";
     summary.textContent = notice.summary || "요약 정보가 없습니다.";
@@ -145,12 +151,12 @@ function createNoticeCard(notice) {
  * 5. 모달 열기
  * ─────────────────
  */
-function openModal(notice) {
+async function openModal(notice) {
     modalTag.textContent     = notice.dept_id ? "학과 공지" : "학교 공지";
     modalDate.textContent    = formatDate(notice.published_at || notice.created_at);
     modalTitle.textContent   = notice.title   || "제목 없음";
     modalSummary.textContent = notice.summary || "요약 정보가 없습니다.";
-    modalContent.textContent = notice.content || "본문 내용이 없습니다.";
+    modalContent.textContent = "본문 불러오는 중...";
 
     if (notice.source_url) {
         modalLink.href = notice.source_url;
@@ -161,6 +167,13 @@ function openModal(notice) {
 
     modal.style.display = "flex";
     document.body.style.overflow = "hidden";
+
+    try {
+        const detail = await apiRequest(`/api/notices/${notice.notice_id}`, { method: "GET" });
+        modalContent.textContent = detail.content || "본문 내용이 없습니다.";
+    } catch {
+        modalContent.textContent = "본문을 불러오지 못했습니다.";
+    }
 }
 
 /**
@@ -181,21 +194,64 @@ function closeModal() {
 function renderPagination() {
     const totalPages = Math.ceil(filtered.length / LIMIT);
     noticesPagination.replaceChildren();
-
     if (totalPages <= 1) return;
 
-    for (let i = 1; i <= totalPages; i++) {
+    const WINDOW = 2;
+    const pages  = new Set();
+
+    pages.add(1);
+    pages.add(totalPages);
+    for (let i = currentPage - WINDOW; i <= currentPage + WINDOW; i++) {
+        if (i >= 1 && i <= totalPages) pages.add(i);
+    }
+
+    const sorted = [...pages].sort((a, b) => a - b);
+
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "notices__page-btn";
+    prevBtn.textContent = "‹";
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener("click", () => {
+        if (currentPage > 1) { 
+            currentPage--; render();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    });
+    noticesPagination.appendChild(prevBtn);
+
+    let prev = null;
+    for (const p of sorted) {
+        if (prev !== null && p - prev > 1) {
+            const ellipsis = document.createElement("span");
+            ellipsis.className = "notices__page-ellipsis";
+            ellipsis.textContent = "…";
+            noticesPagination.appendChild(ellipsis);
+        }
         const btn = document.createElement("button");
         btn.className = "notices__page-btn" +
-            (i === currentPage ? " notices__page-btn--active" : "");
-        btn.textContent = i;
+            (p === currentPage ? " notices__page-btn--active" : "");
+        btn.textContent = p;
         btn.addEventListener("click", () => {
-            currentPage = i;
+            currentPage = p;
             render();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
         noticesPagination.appendChild(btn);
+        prev = p;
     }
+
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "notices__page-btn";
+    nextBtn.textContent = "›";
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.addEventListener("click", () => {
+        if (currentPage < totalPages) { 
+            currentPage++;
+            render();
+            window.scrollTo({ top: 0, behavior: "smooth" }); 
+        }
+    });
+    noticesPagination.appendChild(nextBtn);
 }
 
 /**
