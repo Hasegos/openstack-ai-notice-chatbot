@@ -40,6 +40,7 @@ def get_notices(
     return get_notices_by_school(
         db,
         school_id=current_user.school_id,
+        dept_id=current_user.dept_id,
         skip=skip,
         limit=limit
     )
