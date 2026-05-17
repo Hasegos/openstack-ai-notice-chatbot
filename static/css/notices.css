@@ -190,7 +190,7 @@
 
 .notice-card__tag {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 15px;
   color: var(--accent);
   background: var(--accent-dim);
   border-radius: var(--radius-sm);
@@ -452,6 +452,16 @@
 
 .notice-modal__chat-btn:hover {
   opacity: 0.88;
+}
+
+.notices__page-ellipsis {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-dim);
 }
 
 /* ══════════════════

@@ -7,9 +7,9 @@
         <div class="nav__actions">
         {% if is_logged_in %}
             <span class="nav__school-badge">
-            {{ current_user.school.name }}
+            {{ current_user.school.school_name }}
             {% if current_user.department %}
-                <span class="nav__dept">· {{ current_user.department.name }}</span>
+                <span class="nav__dept">· {{ current_user.department.dept_name }}</span>
             {% endif %}
             </span>
             <a href="/notices" class="btn btn--ghost">공지 목록</a>
