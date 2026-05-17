@@ -39,87 +39,80 @@
 
 ## 🛠️ 기술 스택
 
-+ **Backend** :
-<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
-<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
++ **Backend** :<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white"> <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
 
-+ **Frontend** :
-<img src="https://img.shields.io/badge/html5-E34F26?style=for-the-badge&logo=html5&logoColor=white">
-<img src="https://img.shields.io/badge/css-1572B6?style=for-the-badge&logo=css3&logoColor=white">
-<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=JavaScript&logoColor=white">
++ **Frontend** : <img src="https://img.shields.io/badge/html5-E34F26?style=for-the-badge&logo=html5&logoColor=white"> <img src="https://img.shields.io/badge/css-1572B6?style=for-the-badge&logo=css3&logoColor=white"> <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=JavaScript&logoColor=white">
 
-+ **Database** :
-<img src="https://img.shields.io/badge/postgresql-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
++ **Database** : <img src="https://img.shields.io/badge/postgresql-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
 
-+ **AI / LLM** :
-<img src="https://img.shields.io/badge/vLLM-412991?style=for-the-badge&logo=ai&logoColor=white">
-<img src="https://img.shields.io/badge/Llama 3.1 70B-FF6600?style=for-the-badge&logo=meta&logoColor=white">
-<img src="https://img.shields.io/badge/BGE--M3-FF6F00?style=for-the-badge&logo=huggingface&logoColor=white">
-<img src="https://img.shields.io/badge/NVIDIA RTX 5090-76B900?style=for-the-badge&logo=nvidia&logoColor=white">
++ **AI / LLM** : <img src="https://img.shields.io/badge/vLLM-412991?style=for-the-badge&logo=ai&logoColor=white"> <img src="https://img.shields.io/badge/Llama 3.1 70B-FF6600?style=for-the-badge&logo=meta&logoColor=white"> <img src="https://img.shields.io/badge/BGE--M3-FF6F00?style=for-the-badge&logo=huggingface&logoColor=white"> <img src="https://img.shields.io/badge/NVIDIA RTX 5090-76B900?style=for-the-badge&logo=nvidia&logoColor=white">
 
-+ **자동화 / 크롤링** :
-<img src="https://img.shields.io/badge/n8n-EA4B71?style=for-the-badge&logo=n8n&logoColor=white">
++ **자동화 / 크롤링** : <img src="https://img.shields.io/badge/n8n-EA4B71?style=for-the-badge&logo=n8n&logoColor=white">
 
-+ **Infra** :
-<img src="https://img.shields.io/badge/OpenStack-ED1944?style=for-the-badge&logo=openstack&logoColor=white">
-<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
++ **Infra** : <img src="https://img.shields.io/badge/OpenStack-ED1944?style=for-the-badge&logo=openstack&logoColor=white"> <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 
-+ **Tooling** :
-<img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white">
-<img src="https://img.shields.io/badge/notion-000?style=for-the-badge&logo=Notion&logoColor=white">
-<img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white">
++ **Tooling** : <img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white"> <img src="https://img.shields.io/badge/notion-000?style=for-the-badge&logo=Notion&logoColor=white"> <img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white">
 
 ## 🗏 페이지 구성
 
 ### 홈 페이지
 
-<img width="1867" height="863" alt="홈페이지" src="https://github.com/user-attachments/assets/aa937317-693c-4b07-b273-41717f0c22db" />
-<img width="1868" height="1071" alt="홈페이지" src="https://github.com/user-attachments/assets/4d7f83be-0a6a-474f-81db-3e8d9a9de36e" />
+<img width="800" alt="홈페이지" src="assets/screenshots/01_home.png" />
+<img width="800" alt="홈페이지" src="assets/screenshots/02_home.png" />
 
-- 학교·학과 셀렉트박스로 가입 진입
-- RAG 파이프라인 터미널 데모 시각화
-- AI 자동 요약 / 의미 기반 검색 / 학교·학과 맞춤 / 대화형 채팅 기능 소개
+<br>
+
++ 학교·학과 셀렉트박스로 가입 진입
++ RAG 파이프라인 터미널 데모 시각화
++ AI 자동 요약 / 의미 기반 검색 / 학교·학과 맞춤 / 대화형 채팅 기능 소개
 
 ### 로그인 / 회원가입 페이지
 
-<img width="1855" height="1265" alt="로그인" src="https://github.com/user-attachments/assets/3af3dc95-2796-4dd2-8f9f-cd17afd7d2c1" />
-<img width="1829" height="1158" alt="회원가입" src="https://github.com/user-attachments/assets/f61fda46-82e6-4a72-867a-c75e552fd216" />
+<img width="800" alt="로그인" src="assets/screenshots/login.png" />
+<img width="800" alt="회원가입" src="assets/screenshots/register.png" />
 
-- 이메일·비밀번호 기반 회원가입 / 로그인
-- 가입 시 학교·학과 선택 → 개인화된 공지 범위 설정
-- 비밀번호: 영문 + 숫자 + 특수문자 8자 이상 검증
-- 로그인 시 JWT HttpOnly 쿠키 발급 (XSS 방어)
+<br>
+
++ 이메일·비밀번호 기반 회원가입 / 로그인
++ 가입 시 학교·학과 선택 → 개인화된 공지 범위 설정
++ 비밀번호: 영문 + 숫자 + 특수문자 8자 이상 검증
++ 로그인 시 JWT HttpOnly 쿠키 발급 (XSS 방어)
 
 ### 공지사항 페이지
 
-<img width="1826" height="1264" alt="공지사항" src="https://github.com/user-attachments/assets/6c5ef356-5f76-427d-a613-d70009049b87" />
-<img width="1857" height="1262" alt="공지사항" src="https://github.com/user-attachments/assets/912b2a70-d62a-4da2-840a-78517f7692e9" />
+<img width="800" alt="공지사항" src="assets/screenshots/01_notices.png" />
+<img width="800" alt="공지사항" src="assets/screenshots/02_notices.png" />
+<img width="600" alt="공지사항" src="assets/screenshots/03_notices.png" />
 
-- 학교 공지 + 내 학과 공지 통합 조회 (타학과 공지 차단)
-- 사이드바 필터: 전체 / 학교 공지 / 학과 공지 분류
-- 공지 카드 클릭 시 본문 상세 모달 표시
-- 키워드 검색 (300ms 디바운스)
-- 페이지네이션 윈도잉 처리 (`‹ 1 … 20 21 [22] 23 24 … 43 ›`)
+<br>
+
++ 학교 공지 + 내 학과 공지 통합 조회 (타학과 공지 차단)
++ 사이드바 필터: 전체 / 학교 공지 / 학과 공지 분류
++ 공지 카드 클릭 시 본문 상세 모달 표시
++ 키워드 검색 (300ms 디바운스)
++ 페이지네이션 윈도잉 처리 (`‹ 1 … 20 21 [22] 23 24 … 43 ›`)
 
 ### AI 챗봇 페이지
 
-<img width="1847" height="1256" alt="Image" src="https://github.com/user-attachments/assets/59e18208-078c-4565-8633-e45856b03174" />
+<img width="800" alt="채팅" src="assets/screenshots/chat.png" />
 
-- 자연어 질문 → RAG 기반 공지 검색 → LLM 답변 생성
-- 질문 의도 자동 분류:
-  - 개수 질문 → DB 직접 집계 후 응답
-  - 최신/목록 질문 → 최신순 DB 조회 후 응답
-  - 일반 질문 → pgvector 코사인 유사도 검색 (Top-5)
-- RAG 검색 범위: 내 학교 공지 + 내 학과 공지만
-- 공지 현황(학교/학과/전체 개수)을 매 요청마다 컨텍스트 주입
-- 채팅 세션 관리 (생성·조회·삭제)
-- 무관한 질문 자동 회피 처리
+<br>
+
++ 자연어 질문 → RAG 기반 공지 검색 → LLM 답변 생성
++ 질문 의도 자동 분류:
+  + 개수 질문 → DB 직접 집계 후 응답
+  + 최신/목록 질문 → 최신순 DB 조회 후 응답
+  + 일반 질문 → pgvector 코사인 유사도 검색 (Top-5)
++ RAG 검색 범위: 내 학교 공지 + 내 학과 공지만
++ 공지 현황(학교/학과/전체 개수)을 매 요청마다 컨텍스트 주입
++ 채팅 세션 관리 (생성·조회·삭제)
++ 무관한 질문 자동 회피 처리
 
 ## 📊 ERD (Entity Relationship Diagram)
 
 ### 🗺️ ERD 개요
 
-<img width="2140" height="842" alt="Image" src="https://github.com/user-attachments/assets/ade6f668-63d8-4419-ae4d-2f7fa1ea4487" />
+<img width="800" alt="공지사항" src="assets/screenshots/ERD.png" />
 
 | 테이블 | 설명 |
 |---|---|
