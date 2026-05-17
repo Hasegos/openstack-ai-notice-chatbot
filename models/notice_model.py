@@ -18,7 +18,7 @@ class Notice(Base):
     content      : Mapped[Optional[str]]        = mapped_column(Text, nullable=True)
     summary      : Mapped[Optional[str]]        = mapped_column(Text, nullable=True)
     source_url   : Mapped[Optional[str]]        = mapped_column(String(500), nullable=True)
-    # embedding    : Mapped[Optional[List[float]]] = mapped_column(Vector(1024), nullable=True)
+    embedding    : Mapped[Optional[List[float]]] = mapped_column(Vector(1024), nullable=True)
     published_at : Mapped[Optional[datetime]]   = mapped_column(TIMESTAMP, nullable=True)
     created_at   : Mapped[Optional[datetime]]   = mapped_column(TIMESTAMP, nullable=True, server_default=func.now())
 
