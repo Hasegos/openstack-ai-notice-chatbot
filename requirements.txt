@@ -1,0 +1,23 @@
+# ── Web Framework ────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+jinja2==3.1.6
+python-multipart==0.0.20
+
+# ── Database ─────────────────────────────
+sqlalchemy==2.0.40
+psycopg2-binary==2.9.10
+pgvector==0.3.6
+
+# ── Auth & Security ───────────────────────
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+
+# ── Settings & Validation ─────────────────
+pydantic==2.11.3
+pydantic-settings==2.8.1
+pydantic[email]==2.11.3
+
+# ── HTTP Client (LLM / Embedding 호출) ───
+httpx==0.28.1
