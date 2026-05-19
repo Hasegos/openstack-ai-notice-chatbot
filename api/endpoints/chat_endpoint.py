@@ -68,7 +68,7 @@ async def call_lm_studio(messages: list[dict]) -> str:
             print(f"[LM Studio] 응답 내용: {response.text}")
         response.raise_for_status()
         data = response.json()
-        return data["message"]["content"]  # ← 여기만 변경
+        return data["response"]
 
 # ─────────────────────────────────────
 # 의도 분류
