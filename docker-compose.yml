@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+
+  # ─────────────────────────────
+  # 1. PostgreSQL + pgvector
+  # ─────────────────────────────
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: noticebot_db
+    environment:
+      POSTGRES_USER: ${POSTGRESQL_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL_DATABASE}
+      TZ: Asia/Seoul
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────
+  # 2. FastAPI
+  # ─────────────────────────────
+  api:
+    build: .
+    container_name: noticebot_api
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_SERVER: db        # 컨테이너명으로 DB 접근
+      TZ: Asia/Seoul
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────
+  # 3. Nginx (리버스 프록시)
+  # ─────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: noticebot_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  db_data:
