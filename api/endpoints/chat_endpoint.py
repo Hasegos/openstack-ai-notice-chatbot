@@ -29,7 +29,7 @@ async def get_embedding(text: str) -> list[float]:
     """
     payload = {
         "model": settings.EMBEDDING_MODEL,
-        "input": text,
+        "prompt": text,
     }
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
@@ -39,7 +39,7 @@ async def get_embedding(text: str) -> list[float]:
         )
         response.raise_for_status()
         data = response.json()
-        return data["data"][0]["embedding"]
+        return data["embedding"]
 
 # ─────────────────────────────────────────────────────
 # LM Studio 설정
@@ -53,8 +53,6 @@ async def call_lm_studio(messages: list[dict]) -> str:
     payload = {
         "model": settings.LM_STUDIO_MODEL,
         "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": 1024,
         "stream": False,
     }
 
@@ -70,7 +68,7 @@ async def call_lm_studio(messages: list[dict]) -> str:
             print(f"[LM Studio] 응답 내용: {response.text}")
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        return data["message"]["content"]
 
 # ─────────────────────────────────────
 # 의도 분류
