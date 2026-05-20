@@ -50,9 +50,6 @@ async def call_lm_studio(messages: list[dict]) -> str:
     LM Studio 로컬 서버에 chat completion 요청을 보냅니다.
     OpenAI 호환 형식으로 요청합니다.
     """
-    
-    prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-    
     payload = {
         "model": settings.LM_STUDIO_MODEL,
         "messages": messages,
