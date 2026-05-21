@@ -170,10 +170,132 @@ async function openModal(notice) {
 
     try {
         const detail = await apiRequest(`/api/notices/${notice.notice_id}`, { method: "GET" });
-        modalContent.textContent = detail.content || "본문 내용이 없습니다.";
+        const raw = detail.content || "";
+
+        if(raw){
+            modalContent.replaceChildren(buildSafeContent(raw));
+        }
+        else{
+            modalContent.textContent = "본문 내용이 없습니다."
+        }
     } catch {
         modalContent.textContent = "본문을 불러오지 못했습니다.";
     }
+}
+
+function buildSafeContent(html) {
+    const ALLOWED_IMG_HOST = "www.uc.ac.kr";
+    const doc = new DOMParser().parseFromString(html || "", "text/html");
+    const out = document.createDocumentFragment();
+
+    function convert(srcNode, destParent) {
+        srcNode.childNodes.forEach((child) => {
+            if (child.nodeType === Node.TEXT_NODE) {
+                // 태그를 벗기며 살아남는 들여쓰기/개행을 단일 공백으로 축약.
+                // 공백만 있는 텍스트 노드는 통째로 버린다.
+                const normalized = child.nodeValue.replace(/\s+/g, " ");
+                if (normalized.trim() === "") return;
+                destParent.appendChild(document.createTextNode(normalized));
+                return;
+            }
+            if (child.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = child.tagName.toLowerCase();
+
+            switch (tag) {
+                case "p": {
+                    const p = document.createElement("p");
+                    convert(child, p);
+                    if (p.childNodes.length) destParent.appendChild(p); // 빈 <p> 버림
+                    break;
+                }
+                case "br":
+                    destParent.appendChild(document.createElement("br"));
+                    break;
+                case "strong":
+                case "b": {
+                    const s = document.createElement("strong");
+                    convert(child, s);
+                    if (s.childNodes.length) destParent.appendChild(s);
+                    break;
+                }
+                case "img": {
+                    const src = child.getAttribute("src") || "";
+                    try {
+                        const u = new URL(src, location.origin);
+                        if ((u.protocol === "http:" || u.protocol === "https:")
+                            && u.hostname === ALLOWED_IMG_HOST) {
+                            const img = document.createElement("img");
+                            img.src = u.href;
+                            img.alt = child.getAttribute("alt") || "";
+                            img.loading = "lazy";
+                            destParent.appendChild(img);
+                        }
+                    } catch { /* 무시 */ }
+                    break;
+                }
+                case "a": {
+                    const href = child.getAttribute("href") || "";
+                    try {
+                        const u = new URL(href, location.origin);
+                        if (u.protocol === "http:" || u.protocol === "https:") {
+                            const a = document.createElement("a");
+                            a.href = u.href;
+                            a.target = "_blank";
+                            a.rel = "noopener noreferrer";
+                            convert(child, a);
+                            destParent.appendChild(a);
+                            break;
+                        }
+                    } catch { /* fall through */ }
+                    convert(child, destParent);
+                    break;
+                }
+
+                // ── 표 계열 ──────────────────────────────
+                case "table": {
+                    const t = document.createElement("table");
+                    convert(child, t);
+                    if (t.childNodes.length) destParent.appendChild(t);
+                    break;
+                }
+                case "thead":
+                case "tbody":
+                case "tfoot": {
+                    const sec = document.createElement(tag);
+                    convert(child, sec);
+                    if (sec.childNodes.length) destParent.appendChild(sec);
+                    break;
+                }
+                case "tr": {
+                    const tr = document.createElement("tr");
+                    convert(child, tr);
+                    if (tr.childNodes.length) destParent.appendChild(tr);
+                    break;
+                }
+                case "th":
+                case "td": {
+                    const cell = document.createElement(tag);
+                    // colspan/rowspan 은 숫자만 안전하게 허용
+                    const cs = child.getAttribute("colspan");
+                    const rs = child.getAttribute("rowspan");
+                    if (cs && /^\d+$/.test(cs)) cell.colSpan = parseInt(cs, 10);
+                    if (rs && /^\d+$/.test(rs)) cell.rowSpan = parseInt(rs, 10);
+                    convert(child, cell);
+                    destParent.appendChild(cell); // 빈 셀도 유지 (표 구조상 필요)
+                    break;
+                }
+                // ────────────────────────────────────────
+
+                default:
+                    // span, font, div 등: 태그 버리고 내용만
+                    convert(child, destParent);
+            }
+        });
+    }
+
+    convert(doc.body, out);
+    return out;
 }
 
 /**
