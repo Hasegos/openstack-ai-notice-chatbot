@@ -109,6 +109,19 @@ def extract_article_keyword(message: str) -> str | None:
         return f"제{m.group(1)}조"
     return None
 
+# ─────────────────────────────────────
+# 연도 패턴 감지
+# ─────────────────────────────────────
+def extract_year_keyword(message: str) -> str | None:
+    """
+    메시지에서 연도 패턴 감지
+    예: '2020년 계절학기', '2019년도 규정'
+    """
+    m = re.search(r'(\d{4})\s*년', message)
+    if m:
+        return m.group(1)
+    return None
+
 # ─────────────────────
 # 1. 채팅 메시지 전송
 # ─────────────────────
@@ -244,11 +257,19 @@ async def chat(
                     school_id=current_user.school_id,
                     limit=10,
                 )
+                year_keyword = extract_year_keyword(req.message)
                 for row in similar_regs:
                     print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
                     if row.similarity < 0.5:
                         continue
-                    content = f"[교칙 {row.category} {row.title}]\n{row.content}"
+                    # 개정 이력 포함
+                    revision_info = ""
+                    if row.revision_history:
+                        revision_info = f"\n[개정 이력] {row.revision_history}"
+                    # 연도 질문이면 해당 연도 관련 개정 이력 강조
+                    if year_keyword and row.revision_history and year_keyword in row.revision_history:
+                        revision_info += f"\n[참고] {year_keyword}년 관련 개정 내역 포함"
+                    content = f"[교칙 {row.category} {row.title}]{revision_info}\n{row.content}"
                     if content not in reg_parts:
                         reg_parts.append(content)
 
