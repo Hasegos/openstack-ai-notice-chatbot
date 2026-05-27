@@ -19,10 +19,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
     # ──────────────────────
-    # 3. LM Studio 모델
+    # 3. Ollama 모델
     # ──────────────────────
-    LM_STUDIO_URL: str
-    LM_STUDIO_MODEL: str
+    Ollama_URL: str
+    Ollama_MODEL: str
     SYSTEM_PROMPT: str = """당신은 울산과학대학교 공지사항을 안내하는 AI 어시스턴트입니다.
     아래 규칙을 반드시 따르세요.
     1. 제공된 공지사항 검색 결과와 공지 현황 데이터를 최우선으로 참고하여 답변하세요.
@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     EMBEDDING_URL: str
     EMBEDDING_MODEL: str
     
+    # LLM 생성 파라미터
+    LLM_TEMPERATURE: float
+    LLM_TOP_K: int
+    LLM_TOP_P: float
+    LLM_REPEAT_PENALTY: float
+    LLM_NUM_PREDICT: int
+
     # ──────────────────────────
     # 4. 계산된 프로퍼티 (DB URL)
     # ──────────────────────────
