@@ -1,3 +1,4 @@
+import re
 import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,7 +15,7 @@ from crud.chat_crud import (
     get_messages_by_session,
 )
 from crud.notice_crud import search_similar_notices, count_notices, get_recent_notices
-from crud.regulation_crud import search_similar_regulations
+from crud.regulation_crud import search_similar_regulations, search_regulations_by_keyword
 from db.session import get_db
 from models.user_model import User
 from schemas.chat_schema import ChatRequest, ChatResponse, ChatSessionOut
@@ -22,11 +23,11 @@ from schemas.chat_schema import ChatRequest, ChatResponse, ChatSessionOut
 router = APIRouter()
 
 # ─────────────────────────────────────────────────────
-# 임베딩 API 호출 (LM Studio)
+# 임베딩 API 호출
 # ─────────────────────────────────────────────────────
 async def get_embedding(text: str) -> list[float]:
     """
-    LM Studio 임베딩 API를 호출하여 텍스트의 벡터를 반환합니다.
+    임베딩 API를 호출하여 텍스트의 벡터를 반환합니다.
     """
     payload = {
         "model": settings.EMBEDDING_MODEL,
@@ -43,24 +44,22 @@ async def get_embedding(text: str) -> list[float]:
         return data["embedding"]
 
 # ─────────────────────────────────────────────────────
-# LM Studio 설정
-# API 키 불필요, 모델명은 LM Studio에 로드된 모델 사용
+# Ollama 호출
 # ─────────────────────────────────────────────────────
 async def call_lm_studio(messages: list[dict]) -> str:
     """
-    LM Studio 로컬 서버에 chat completion 요청을 보냅니다.
-    OpenAI 호환 형식으로 요청합니다.
+    Ollama 로컬 서버에 chat completion 요청을 보냅니다.
     """
     payload = {
         "model": settings.Ollama_MODEL,
         "messages": messages,
         "stream": False,
-         "options": {
-            "temperature": settings.LLM_TEMPERATURE,
-            "top_k": settings.LLM_TOP_K,
-            "top_p": settings.LLM_TOP_P,
+        "options": {
+            "temperature":    settings.LLM_TEMPERATURE,
+            "top_k":          settings.LLM_TOP_K,
+            "top_p":          settings.LLM_TOP_P,
             "repeat_penalty": settings.LLM_REPEAT_PENALTY,
-            "num_predict": settings.LLM_NUM_PREDICT,
+            "num_predict":    settings.LLM_NUM_PREDICT,
         }
     }
 
@@ -70,10 +69,9 @@ async def call_lm_studio(messages: list[dict]) -> str:
             json=payload,
             headers={"Content-Type": "application/json"},
         )
-        # 400일 때 실제 응답 내용 출력
         if response.status_code != 200:
-            print(f"[LM Studio] 상태코드: {response.status_code}")
-            print(f"[LM Studio] 응답 내용: {response.text}")
+            print(f"[Ollama] 상태코드: {response.status_code}")
+            print(f"[Ollama] 응답 내용: {response.text}")
         response.raise_for_status()
         data = response.json()
         return data["message"]["content"]
@@ -98,6 +96,18 @@ def classify_intent(message: str) -> str:
     if any(k in msg for k in LIST_KEYWORDS):
         return "list"
     return "search"
+
+# ─────────────────────────────────────
+# 조항 번호 패턴 감지
+# ─────────────────────────────────────
+def extract_article_keyword(message: str) -> str | None:
+    """
+    메시지에서 '제N조', 'N조', 'N조항' 패턴을 감지합니다.
+    """
+    m = re.search(r'제?(\d+)조', message)
+    if m:
+        return f"제{m.group(1)}조"
+    return None
 
 # ─────────────────────
 # 1. 채팅 메시지 전송
@@ -127,7 +137,6 @@ async def chat(
                 detail="세션을 찾을 수 없습니다."
             )
     else:
-        # 첫 질문 앞 20자를 세션 제목으로 사용
         title = req.message[:20] + ("..." if len(req.message) > 20 else "")
         session = create_session(db, current_user.user_id, title)
 
@@ -137,15 +146,14 @@ async def chat(
     create_message(db, session.session_id, "user", req.message)
 
     # ──────────────────────────────────────
-    # 1-3. RAG: 질문 임베딩 → 유사 공지 검색
+    # 1-3. RAG: 질문 임베딩 → 유사 공지/교칙 검색
     # ──────────────────────────────────────
-    rag_context = ""
+    rag_context        = ""
     regulation_context = ""
-    source_ids = []
-    intent      = classify_intent(req.message)
+    source_ids         = []
+    intent             = classify_intent(req.message)
     print(f"[Intent] 분류 결과: {intent}")
 
-    # 항상 공지 개수 주입 (집계 질문 대비)
     counts = count_notices(db, school_id=current_user.school_id, dept_id=current_user.dept_id)
     count_context = (
         f"[공지 현황] 학교 공지: {counts['school_count']}개 / "
@@ -155,11 +163,9 @@ async def chat(
 
     try:
         if intent == "count":
-            # 개수 질문 → 카운트만 넘김
             rag_context = count_context
 
         elif intent in ("recent", "list"):
-            # 최신/목록 질문 → 최근 공지 목록 넘김
             limit = 20 if intent == "list" else 5
             recent = get_recent_notices(
                 db,
@@ -175,7 +181,7 @@ async def chat(
             rag_context = count_context + "\n\n[최근 공지 목록]\n" + "\n".join(lines)
 
         else:
-            # 기본: 유사도 기반 RAG 검색
+            # ── 공지 유사도 검색 ──────────────────────
             query_embedding = await get_embedding(req.message)
             print(f"[RAG] embedding 생성 완료: {len(query_embedding)}차원")
 
@@ -198,26 +204,47 @@ async def chat(
                         f"[공지 제목] {row.title}\n[내용] {content_preview}\n[출처] {row.source_url}"
                     )
                 rag_context = "\n\n---\n\n".join(context_parts)
-            
-            # ── 교칙 RAG 추가 ──────────────────────────
+
+            # ── 교칙 RAG ──────────────────────────────
+            reg_parts = []
+
+            # ── 2-1. 조항 번호 패턴 감지 → 키워드 검색 ──
+            article_keyword = extract_article_keyword(req.message)
+            if article_keyword:
+                print(f"[Regulation] 조항 키워드 감지: {article_keyword}")
+                keyword_regs = search_regulations_by_keyword(
+                    db,
+                    keyword=article_keyword,
+                    school_id=current_user.school_id,
+                    limit=5,
+                )
+                for row in keyword_regs:
+                    print(f"[Regulation 키워드] {row.category} {row.title}")
+                    reg_parts.append(
+                        f"[교칙 {row.category} {row.title}]\n{row.content}"
+                    )
+
+            # ── 2-2. 유사도 검색 (상위 10개) ─────────────
             similar_regs = search_similar_regulations(
                 db,
                 query_embedding=query_embedding,
                 school_id=current_user.school_id,
-                limit=3,
+                limit=10,
             )
-            if similar_regs:
-                reg_parts = []
-                for row in similar_regs:
-                    reg_parts.append(
-                        f"[교칙 {row.category} {row.title}]\n{row.content}"
-                    )
+            for row in similar_regs:
+                print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
+                content = f"[교칙 {row.category} {row.title}]\n{row.content}"
+                # 키워드 검색 결과와 중복 제거
+                if content not in reg_parts:
+                    reg_parts.append(content)
+
+            if reg_parts:
                 regulation_context = "\n\n---\n\n".join(reg_parts)
-                print(f"[Regulation RAG] 검색 결과: {len(similar_regs)}개")
+                print(f"[Regulation RAG] 최종 {len(reg_parts)}개 컨텍스트 구성")
 
     except Exception as e:
         print(f"[RAG] 오류 발생: {e}")
-        rag_context = count_context  # 실패해도 카운트는 넘김
+        rag_context = count_context
 
     # ──────────────────────────────────────────────────────────
     # 1-4. 대화 히스토리 + RAG 컨텍스트 구성
@@ -225,42 +252,38 @@ async def chat(
     system_content = settings.SYSTEM_PROMPT
     if rag_context:
         system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 이를 참고하여 답변하세요:\n\n{rag_context}"
-    
     if regulation_context:
         system_content += f"\n\n아래는 학교 교칙/정관 검색 결과입니다. 규칙 관련 질문 시 이를 우선 참고하세요:\n\n{regulation_context}"
 
     history = get_messages_by_session(db, session.session_id)
     messages = [{"role": "system", "content": system_content}]
-    # 현재 메시지 제외한 이전 히스토리만 포함 (마지막 user 메시지 제외)
-    for msg in history[-20: -1]:
+    for msg in history[-20:-1]:
         messages.append({"role": msg.role, "content": msg.content})
-    # 현재 질문 마지막에 추가
     messages.append({"role": "user", "content": req.message})
 
-    # 1-5. LM Studio 호출 직전에 추가
     total_chars = sum(len(m["content"]) for m in messages)
-    print(f"[LM Studio] 총 메시지 길이: {total_chars}자, 메시지 수: {len(messages)}개")
+    print(f"[Ollama] 총 메시지 길이: {total_chars}자, 메시지 수: {len(messages)}개")
 
     # ──────────────────────────────────────
-    # 1-5. LM Studio 호출
+    # 1-5. Ollama 호출
     # ──────────────────────────────────────
     try:
         answer = await call_lm_studio(messages)
     except httpx.ConnectError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="LM Studio 서버에 연결할 수 없습니다. LM Studio가 실행 중인지 확인해주세요."
+            detail="Ollama 서버에 연결할 수 없습니다. Ollama가 실행 중인지 확인해주세요."
         )
     except httpx.TimeoutException:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LM Studio 응답 시간이 초과되었습니다."
+            detail="Ollama 응답 시간이 초과되었습니다."
         )
     except Exception as e:
-        print(f"[LM Studio] 오류: {e}")
+        print(f"[Ollama] 오류: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="LM Studio 호출 중 오류가 발생했습니다."
+            detail="Ollama 호출 중 오류가 발생했습니다."
         )
 
     # ──────────────────────────────────────
