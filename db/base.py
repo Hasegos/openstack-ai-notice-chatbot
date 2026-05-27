@@ -5,6 +5,7 @@ from models.user_model import User
 from models.notice_model import Notice
 from models.chat_session_model import ChatSession
 from models.chat_message_model import ChatMessage
+from models.regulation_model import Regulation
 
 # ─────────────────────────────────────
 # 1. 모델 통합 관리 (Alembic/Base 전용)

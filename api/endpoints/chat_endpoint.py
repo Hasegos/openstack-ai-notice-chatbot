@@ -14,6 +14,7 @@ from crud.chat_crud import (
     get_messages_by_session,
 )
 from crud.notice_crud import search_similar_notices, count_notices, get_recent_notices
+from crud.regulation_crud import search_similar_regulations
 from db.session import get_db
 from models.user_model import User
 from schemas.chat_schema import ChatRequest, ChatResponse, ChatSessionOut
@@ -50,18 +51,22 @@ async def call_lm_studio(messages: list[dict]) -> str:
     LM Studio 로컬 서버에 chat completion 요청을 보냅니다.
     OpenAI 호환 형식으로 요청합니다.
     """
-    
-    prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-    
     payload = {
-        "model": settings.LM_STUDIO_MODEL,
+        "model": settings.Ollama_MODEL,
         "messages": messages,
         "stream": False,
+         "options": {
+            "temperature": settings.LLM_TEMPERATURE,
+            "top_k": settings.LLM_TOP_K,
+            "top_p": settings.LLM_TOP_P,
+            "repeat_penalty": settings.LLM_REPEAT_PENALTY,
+            "num_predict": settings.LLM_NUM_PREDICT,
+        }
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
-            settings.LM_STUDIO_URL,
+            settings.Ollama_URL,
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -135,6 +140,7 @@ async def chat(
     # 1-3. RAG: 질문 임베딩 → 유사 공지 검색
     # ──────────────────────────────────────
     rag_context = ""
+    regulation_context = ""
     source_ids = []
     intent      = classify_intent(req.message)
     print(f"[Intent] 분류 결과: {intent}")
@@ -192,6 +198,22 @@ async def chat(
                         f"[공지 제목] {row.title}\n[내용] {content_preview}\n[출처] {row.source_url}"
                     )
                 rag_context = "\n\n---\n\n".join(context_parts)
+            
+            # ── 교칙 RAG 추가 ──────────────────────────
+            similar_regs = search_similar_regulations(
+                db,
+                query_embedding=query_embedding,
+                school_id=current_user.school_id,
+                limit=3,
+            )
+            if similar_regs:
+                reg_parts = []
+                for reg, _ in similar_regs:
+                    reg_parts.append(
+                        f"[교칙 {reg.category} {reg.title}]\n{reg.content}"
+                    )
+                regulation_context = "\n\n---\n\n".join(reg_parts)
+                print(f"[Regulation RAG] 검색 결과: {len(similar_regs)}개")
 
     except Exception as e:
         print(f"[RAG] 오류 발생: {e}")
@@ -203,6 +225,9 @@ async def chat(
     system_content = settings.SYSTEM_PROMPT
     if rag_context:
         system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 이를 참고하여 답변하세요:\n\n{rag_context}"
+    
+    if regulation_context:
+        system_content += f"\n\n아래는 학교 교칙/정관 검색 결과입니다. 규칙 관련 질문 시 이를 우선 참고하세요:\n\n{regulation_context}"
 
     history = get_messages_by_session(db, session.session_id)
     messages = [{"role": "system", "content": system_content}]
