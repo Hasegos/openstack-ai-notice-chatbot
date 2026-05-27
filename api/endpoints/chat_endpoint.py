@@ -208,9 +208,9 @@ async def chat(
             )
             if similar_regs:
                 reg_parts = []
-                for reg, _ in similar_regs:
+                for row in similar_regs:
                     reg_parts.append(
-                        f"[교칙 {reg.category} {reg.title}]\n{reg.content}"
+                        f"[교칙 {row.category} {row.title}]\n{row.content}"
                     )
                 regulation_context = "\n\n---\n\n".join(reg_parts)
                 print(f"[Regulation RAG] 검색 결과: {len(similar_regs)}개")
