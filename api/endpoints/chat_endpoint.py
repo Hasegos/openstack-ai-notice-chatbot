@@ -161,6 +161,9 @@ async def chat(
         f"전체: {counts['total']}개"
     )
 
+    # ──────────────────────────────────────
+    # 1-3-1. 공지 검색
+    # ──────────────────────────────────────
     try:
         if intent == "count":
             rag_context = count_context
@@ -205,10 +208,18 @@ async def chat(
                     )
                 rag_context = "\n\n---\n\n".join(context_parts)
 
-            # ── 교칙 RAG ──────────────────────────────
+    except Exception as e:
+        print(f"[공지 RAG] 오류 발생: {e}")
+        rag_context = count_context
+
+    # ──────────────────────────────────────
+    # 1-3-2. 교칙 검색 (공지와 별도 try/except)
+    # ──────────────────────────────────────
+    if intent == "search":
+        try:
             reg_parts = []
 
-            # ── 2-1. 조항 번호 패턴 감지 → 키워드 검색 ──
+            # ── 조항 번호 패턴 감지 → 키워드 검색 ──────
             article_keyword = extract_article_keyword(req.message)
             if article_keyword:
                 print(f"[Regulation] 조항 키워드 감지: {article_keyword}")
@@ -224,7 +235,7 @@ async def chat(
                         f"[교칙 {row.category} {row.title}]\n{row.content}"
                     )
 
-            # ── 2-2. 유사도 검색 (상위 10개) ─────────────
+            # ── 유사도 검색 (상위 10개, threshold 0.5 이상) ──
             similar_regs = search_similar_regulations(
                 db,
                 query_embedding=query_embedding,
@@ -233,6 +244,9 @@ async def chat(
             )
             for row in similar_regs:
                 print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
+                # 유사도 0.5 미만은 관련 없는 조항이므로 제외
+                if row.similarity < 0.5:
+                    continue
                 content = f"[교칙 {row.category} {row.title}]\n{row.content}"
                 # 키워드 검색 결과와 중복 제거
                 if content not in reg_parts:
@@ -241,10 +255,11 @@ async def chat(
             if reg_parts:
                 regulation_context = "\n\n---\n\n".join(reg_parts)
                 print(f"[Regulation RAG] 최종 {len(reg_parts)}개 컨텍스트 구성")
+            else:
+                print(f"[Regulation RAG] 관련 교칙 없음")
 
-    except Exception as e:
-        print(f"[RAG] 오류 발생: {e}")
-        rag_context = count_context
+        except Exception as e:
+            print(f"[교칙 RAG] 오류 발생: {e}")
 
     # ──────────────────────────────────────────────────────────
     # 1-4. 대화 히스토리 + RAG 컨텍스트 구성
