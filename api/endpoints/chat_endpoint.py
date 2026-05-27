@@ -151,6 +151,7 @@ async def chat(
     rag_context        = ""
     regulation_context = ""
     source_ids         = []
+    query_embedding    = []
     intent             = classify_intent(req.message)
     print(f"[Intent] 분류 결과: {intent}")
 
@@ -236,21 +237,20 @@ async def chat(
                     )
 
             # ── 유사도 검색 (상위 10개, threshold 0.5 이상) ──
-            similar_regs = search_similar_regulations(
-                db,
-                query_embedding=query_embedding,
-                school_id=current_user.school_id,
-                limit=10,
-            )
-            for row in similar_regs:
-                print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
-                # 유사도 0.5 미만은 관련 없는 조항이므로 제외
-                if row.similarity < 0.5:
-                    continue
-                content = f"[교칙 {row.category} {row.title}]\n{row.content}"
-                # 키워드 검색 결과와 중복 제거
-                if content not in reg_parts:
-                    reg_parts.append(content)
+            if query_embedding:
+                similar_regs = search_similar_regulations(
+                    db,
+                    query_embedding=query_embedding,
+                    school_id=current_user.school_id,
+                    limit=10,
+                )
+                for row in similar_regs:
+                    print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
+                    if row.similarity < 0.5:
+                        continue
+                    content = f"[교칙 {row.category} {row.title}]\n{row.content}"
+                    if content not in reg_parts:
+                        reg_parts.append(content)
 
             if reg_parts:
                 regulation_context = "\n\n---\n\n".join(reg_parts)
