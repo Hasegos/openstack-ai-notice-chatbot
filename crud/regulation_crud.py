@@ -12,7 +12,7 @@ def search_similar_regulations(
     db: Session,
     query_embedding: List[float],
     school_id: int,
-    limit: int = 3,
+    limit: int = 10,
 ) -> list:
     """
     사용자 질문의 임베딩 벡터와 코사인 유사도가 높은 교칙을 반환합니다.
@@ -35,7 +35,8 @@ def search_similar_regulations(
     result = db.execute(
         text("""
             SELECT regulation_id, school_id, category, article_no, title, content,
-                   1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
+                revision_history,
+                1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
             FROM regulations
             WHERE school_id = :school_id
             AND embedding IS NOT NULL
@@ -66,11 +67,12 @@ def search_regulations_by_keyword(
     """
     result = db.execute(
         text("""
-            SELECT regulation_id, school_id, category, article_no, title, content
+            SELECT regulation_id, school_id, category, article_no, title, content,
+                revision_history
             FROM regulations
             WHERE school_id = :school_id
             AND (
-                title   ILIKE :keyword
+                title      ILIKE :keyword
                 OR content    ILIKE :keyword
                 OR article_no ILIKE :keyword
             )
@@ -79,8 +81,8 @@ def search_regulations_by_keyword(
         """),
         {
             "school_id": school_id,
-            "keyword":   f"%{keyword}%",
-            "limit":     limit,
+            "keyword": f"%{keyword}%",
+            "limit": limit,
         }
     ).fetchall()
 

@@ -245,9 +245,10 @@ async def chat(
                 )
                 for row in keyword_regs:
                     print(f"[Regulation 키워드] {row.category} {row.title}")
-                    reg_parts.append(
-                        f"[교칙 {row.category} {row.title}]\n{row.content}"
-                    )
+                    content_str = f"[교칙 {row.category} {row.title}]\n{row.content}"
+                    if row.revision_history:
+                        content_str += f"\n[개정 이력] {row.revision_history}"
+                    reg_parts.append(content_str)
 
             # ── 유사도 검색 (상위 10개, threshold 0.5 이상) ──
             if query_embedding:
