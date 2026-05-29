@@ -78,7 +78,7 @@ async def call_lm_studio(messages: list[dict]) -> str:
         return data["message"]["content"]
 
 # ─────────────────────────────────────
-# 의도 분류
+# 의도 분류 (집계/최신/목록/검색)
 # ─────────────────────────────────────
 def classify_intent(message: str) -> str:
     """
@@ -97,6 +97,37 @@ def classify_intent(message: str) -> str:
     if any(k in msg for k in LIST_KEYWORDS):
         return "list"
     return "search"
+
+# ─────────────────────────────────────
+# 공지 vs 규정 성향 판단
+# ─────────────────────────────────────
+def detect_query_type(message: str) -> str:
+    """
+    질문이 공지성인지 규정성인지 판단합니다.
+    - notice:     일정, 신청, 모집 등 시의성 있는 정보
+    - regulation: 규정, 기준, 자격 등 제도적 정보
+    - both:       둘 다 관련 (기본값)
+    """
+    msg = message.lower()
+
+    NOTICE_KEYWORDS = [
+        "신청", "모집", "일정", "기간", "마감", "접수", "안내",
+        "언제", "장학", "행사", "공모", "채용", "설명회", "특강", "공지"
+    ]
+    REGULATION_KEYWORDS = [
+        "규정", "규칙", "학칙", "정관", "기준", "자격", "조항",
+        "이수", "졸업요건", "졸업 요건", "휴학", "복학", "제적",
+        "징계", "평점", "학점", "등록금", "수업연한", "학사경고"
+    ]
+
+    has_notice     = any(k in msg for k in NOTICE_KEYWORDS)
+    has_regulation = any(k in msg for k in REGULATION_KEYWORDS)
+
+    if has_regulation and not has_notice:
+        return "regulation"
+    if has_notice and not has_regulation:
+        return "notice"
+    return "both"
 
 # ─────────────────────────────────────
 # 조항 번호 패턴 감지
@@ -167,7 +198,8 @@ async def chat(
     source_ids         = []
     query_embedding    = []
     intent             = classify_intent(req.message)
-    print(f"[Intent] 분류 결과: {intent}")
+    query_type         = detect_query_type(req.message)
+    print(f"[Intent] 분류 결과: {intent} / 질문 유형: {query_type}")
 
     counts = count_notices(db, school_id=current_user.school_id, dept_id=current_user.dept_id)
     count_context = (
@@ -203,23 +235,36 @@ async def chat(
             query_embedding = await get_embedding(req.message)
             print(f"[RAG] embedding 생성 완료: {len(query_embedding)}차원")
 
+            # 규정성 질문이면 공지는 적게, 그 외엔 5개
+            notice_limit = 3 if query_type == "regulation" else 5
+
             similar_notices = search_similar_notices(
                 db,
                 query_embedding=query_embedding,
                 school_id=current_user.school_id,
                 dept_id=current_user.dept_id,
-                limit=5
+                limit=notice_limit
             )
-            print(f"[RAG] 검색 결과: {len(similar_notices)}개")
+            print(f"[RAG] 공지 검색 결과: {len(similar_notices)}개")
 
             if similar_notices:
+                # 최신순 정렬 (published_at 내림차순) → LLM이 최신 판단 쉽게
+                sorted_notices = sorted(
+                    similar_notices,
+                    key=lambda r: r.published_at or "",
+                    reverse=True
+                )
                 context_parts = [count_context]
-                for row in similar_notices:
+                for row in sorted_notices:
                     source_ids.append(row.notice_id)
-                    print(f"[RAG] 검색된 공지: {row.title} (유사도: {row.similarity:.4f})")
+                    print(f"[RAG] 공지: {row.title} (유사도: {row.similarity:.4f})")
+                    date = row.published_at.strftime("%Y.%m.%d") if row.published_at else "날짜 미상"
                     content_preview = (row.content or "")[:500]
                     context_parts.append(
-                        f"[공지 제목] {row.title}\n[내용] {content_preview}\n[출처] {row.source_url}"
+                        f"[공지 제목] {row.title}\n"
+                        f"[게시일] {date}\n"
+                        f"[내용] {content_preview}\n"
+                        f"[출처] {row.source_url}"
                     )
                 rag_context = "\n\n---\n\n".join(context_parts)
 
@@ -229,10 +274,12 @@ async def chat(
 
     # ──────────────────────────────────────
     # 1-3-2. 교칙 검색 (공지와 별도 try/except)
+    # 규정성/혼합 질문일 때만 교칙 검색 수행
     # ──────────────────────────────────────
-    if intent == "search":
+    if intent == "search" and query_type in ("regulation", "both"):
         try:
-            reg_parts = []
+            reg_parts  = []
+            seen_titles = set()  # 조항 중복 제거용
 
             # ── 조항 번호 패턴 감지 → 키워드 검색 ──────
             article_keyword = extract_article_keyword(req.message)
@@ -245,35 +292,42 @@ async def chat(
                     limit=5,
                 )
                 for row in keyword_regs:
+                    key = f"{row.category}-{row.title}"
+                    if key in seen_titles:
+                        continue
+                    seen_titles.add(key)
                     print(f"[Regulation 키워드] {row.category} {row.title}")
                     content_str = f"[교칙 {row.category} {row.title}]\n{row.content}"
                     if row.revision_history:
                         content_str += f"\n[개정 이력] {row.revision_history}"
                     reg_parts.append(content_str)
 
-            # ── 유사도 검색 (상위 10개, threshold 0.5 이상) ──
+            # ── 유사도 검색 (상위 5개, threshold 0.55 이상) ──
             if query_embedding:
+                # 규정성 질문이면 5개, 혼합이면 3개
+                reg_limit = 5 if query_type == "regulation" else 3
                 similar_regs = search_similar_regulations(
                     db,
                     query_embedding=query_embedding,
                     school_id=current_user.school_id,
-                    limit=10,
+                    limit=reg_limit,
                 )
                 year_keyword = extract_year_keyword(req.message)
                 for row in similar_regs:
                     print(f"[Regulation 유사도] {row.category} {row.title} ({row.similarity:.4f})")
-                    if row.similarity < 0.5:
+                    if row.similarity < 0.55:
                         continue
-                    # 개정 이력 포함
+                    key = f"{row.category}-{row.title}"
+                    if key in seen_titles:
+                        continue
+                    seen_titles.add(key)
                     revision_info = ""
                     if row.revision_history:
                         revision_info = f"\n[개정 이력] {row.revision_history}"
-                    # 연도 질문이면 해당 연도 관련 개정 이력 강조
                     if year_keyword and row.revision_history and year_keyword in row.revision_history:
                         revision_info += f"\n[참고] {year_keyword}년 관련 개정 내역 포함"
                     content = f"[교칙 {row.category} {row.title}]{revision_info}\n{row.content}"
-                    if content not in reg_parts:
-                        reg_parts.append(content)
+                    reg_parts.append(content)
 
             if reg_parts:
                 regulation_context = "\n\n---\n\n".join(reg_parts)
@@ -289,13 +343,13 @@ async def chat(
     # ──────────────────────────────────────────────────────────
     system_content = settings.SYSTEM_PROMPT
     if rag_context:
-        system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 이를 참고하여 답변하세요:\n\n{rag_context}"
+        system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 게시일이 가장 최근인 공지를 우선하여 답변하세요:\n\n{rag_context}"
     if regulation_context:
         system_content += f"\n\n아래는 학교 교칙/정관 검색 결과입니다. 규칙 관련 질문 시 이를 우선 참고하세요:\n\n{regulation_context}"
 
     history = get_messages_by_session(db, session.session_id)
     messages = [{"role": "system", "content": system_content}]
-    for msg in history[-20:-1]:
+    for msg in history[-10:-1]:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": req.message})
 
