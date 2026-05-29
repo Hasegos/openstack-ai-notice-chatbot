@@ -14,7 +14,12 @@ from crud.chat_crud import (
     get_session_by_id,
     get_messages_by_session,
 )
-from crud.notice_crud import search_similar_notices, count_notices, get_recent_notices
+from crud.notice_crud import (
+    search_similar_notices,
+    search_notices_by_keyword,
+    count_notices,
+    get_recent_notices,
+)
 from crud.regulation_crud import search_similar_regulations, search_regulations_by_keyword
 from db.session import get_db
 from models.user_model import User
@@ -83,8 +88,6 @@ async def call_lm_studio(messages: list[dict]) -> str:
 def strip_markdown(text: str) -> str:
     """
     LLM 답변에서 마크다운 강조 문법을 제거합니다.
-    시스템 프롬프트만으로는 모델이 마크다운을 습관적으로 생성하므로
-    출력 단계에서 강제로 제거합니다.
     """
     if not text:
         return text
@@ -122,15 +125,13 @@ def classify_intent(message: str) -> str:
 def detect_query_type(message: str) -> str:
     """
     질문이 공지성인지 규정성인지 판단합니다.
-    - notice:     일정, 신청, 모집 등 시의성 있는 정보
-    - regulation: 규정, 기준, 자격 등 제도적 정보
-    - both:       둘 다 관련 (기본값)
     """
     msg = message.lower()
 
     NOTICE_KEYWORDS = [
         "신청", "모집", "일정", "기간", "마감", "접수", "안내",
-        "언제", "장학", "행사", "공모", "채용", "설명회", "특강", "공지"
+        "언제", "장학", "행사", "공모", "채용", "설명회", "특강", "공지",
+        "프로젝트", "대회", "참여", "프로그램", "캠프", "공모전", "지원", "혜택"
     ]
     REGULATION_KEYWORDS = [
         "규정", "규칙", "학칙", "정관", "기준", "자격", "조항",
@@ -146,6 +147,23 @@ def detect_query_type(message: str) -> str:
     if has_notice and not has_regulation:
         return "notice"
     return "both"
+
+# ─────────────────────────────────────
+# 공지 키워드 추출 (보조 검색용)
+# ─────────────────────────────────────
+def extract_notice_keywords(message: str) -> list[str]:
+    """
+    질문에서 공지 키워드 검색에 쓸 핵심 명사를 추출합니다.
+    추상적 질문(프로젝트/대회 등)도 키워드로 잡아 보조 검색합니다.
+    """
+    CANDIDATES = [
+        "프로젝트", "대회", "공모전", "공모", "캠프", "프로그램",
+        "장학", "장학금", "인턴", "채용", "취업", "설명회", "특강",
+        "세미나", "워크숍", "봉사", "동아리", "행사", "축제",
+        "멘토링", "교육", "강좌", "스터디", "현장실습", "실습"
+    ]
+    found = [kw for kw in CANDIDATES if kw in message]
+    return found
 
 # ─────────────────────────────────────
 # 조항 번호 패턴 감지
@@ -165,7 +183,6 @@ def extract_article_keyword(message: str) -> str | None:
 def extract_year_keyword(message: str) -> str | None:
     """
     메시지에서 연도 패턴 감지
-    예: '2020년 계절학기', '2019년도 규정'
     """
     m = re.search(r'(\d{4})\s*년', message)
     if m:
@@ -187,7 +204,6 @@ async def chat(
 ):
     """
     사용자 메시지를 받아 RAG 파이프라인으로 답변을 생성합니다.
-    session_id가 없으면 새 세션을 자동 생성합니다.
     """
     # ──────────────────────────────────────
     # 1-1. 세션 처리 (신규 or 기존)
@@ -253,8 +269,7 @@ async def chat(
             query_embedding = await get_embedding(req.message)
             print(f"[RAG] embedding 생성 완료: {len(query_embedding)}차원")
 
-            # 규정성 질문이면 공지는 적게, 그 외엔 5개
-            notice_limit = 3 if query_type == "regulation" else 5
+            notice_limit = 3 if query_type == "regulation" else 6
 
             similar_notices = search_similar_notices(
                 db,
@@ -263,19 +278,38 @@ async def chat(
                 dept_id=current_user.dept_id,
                 limit=notice_limit
             )
-            print(f"[RAG] 공지 검색 결과: {len(similar_notices)}개")
+            print(f"[RAG] 공지 유사도 검색: {len(similar_notices)}개")
 
-            if similar_notices:
-                # 최신순 정렬 (published_at 내림차순) → LLM이 최신 판단 쉽게
-                sorted_notices = sorted(
-                    similar_notices,
+            # ── 공지 키워드 보조 검색 (추상적 질문 대응) ──
+            collected   = {}
+            for row in similar_notices:
+                collected[row.notice_id] = row
+
+            keywords = extract_notice_keywords(req.message)
+            if keywords:
+                print(f"[RAG] 공지 키워드 감지: {keywords}")
+                for kw in keywords:
+                    kw_notices = search_notices_by_keyword(
+                        db,
+                        keyword=kw,
+                        school_id=current_user.school_id,
+                        dept_id=current_user.dept_id,
+                        limit=5,
+                    )
+                    for row in kw_notices:
+                        if row.notice_id not in collected:
+                            collected[row.notice_id] = row
+                            print(f"[RAG] 키워드 보조 추가: {row.title}")
+
+            if collected:
+                merged = sorted(
+                    collected.values(),
                     key=lambda r: r.published_at or "",
                     reverse=True
                 )
                 context_parts = [count_context]
-                for row in sorted_notices:
+                for row in merged:
                     source_ids.append(row.notice_id)
-                    print(f"[RAG] 공지: {row.title} (유사도: {row.similarity:.4f})")
                     date = row.published_at.strftime("%Y.%m.%d") if row.published_at else "날짜 미상"
                     content_preview = (row.content or "")[:500]
                     context_parts.append(
@@ -297,8 +331,8 @@ async def chat(
     if intent == "search" and query_type in ("regulation", "both"):
         try:
             reg_parts  = []
-            seen_titles = set()  # 조항 중복 제거용
-
+            seen_titles = set()
+            
             # ── 조항 번호 패턴 감지 → 키워드 검색 ──────
             article_keyword = extract_article_keyword(req.message)
             if article_keyword:
@@ -319,7 +353,6 @@ async def chat(
                     if row.revision_history:
                         content_str += f"\n[개정 이력] {row.revision_history}"
                     reg_parts.append(content_str)
-
             # ── 유사도 검색 (threshold 0.55 이상) ──
             if query_embedding:
                 # 규정성 질문이면 5개, 혼합이면 3개
@@ -361,7 +394,7 @@ async def chat(
     # ──────────────────────────────────────────────────────────
     system_content = settings.SYSTEM_PROMPT
     if rag_context:
-        system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 게시일이 가장 최근인 공지를 우선하여 답변하세요:\n\n{rag_context}"
+        system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 게시일이 가장 최근인 공지를 우선하여 답변하고, 관련 공지의 출처 URL을 반드시 함께 안내하세요:\n\n{rag_context}"
     if regulation_context:
         system_content += f"\n\n아래는 학교 교칙/정관 검색 결과입니다. 규칙 관련 질문 시 이를 우선 참고하세요:\n\n{regulation_context}"
 
@@ -465,7 +498,6 @@ def remove_session(
 ):
     """
     특정 세션과 해당 세션의 모든 메시지를 삭제합니다.
-    본인 세션만 삭제 가능합니다.
     """
     # ──────────────────────────────────────
     # 4-1. 세션 존재 여부 + 소유권 확인
