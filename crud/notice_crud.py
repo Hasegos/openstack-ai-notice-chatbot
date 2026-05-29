@@ -179,3 +179,37 @@ def get_recent_notices(
         .limit(limit)
         .all()
     )
+
+# ──────────────────────────────────────────
+# 7. 공지 키워드 검색 (유사도 보조)
+# 제목/본문에서 키워드 직접 검색
+# ──────────────────────────────────────────
+def search_notices_by_keyword(
+    db: Session,
+    keyword: str,
+    school_id: int,
+    dept_id: int = None,
+    limit: int = 5,
+) -> list:
+    """
+    제목/본문에서 키워드로 직접 검색합니다.
+    임베딩 유사도가 약한 추상적 질문을 보조합니다.
+    """
+    result = db.execute(
+        text("""
+            SELECT notice_id, school_id, dept_id, title, content, source_url, published_at
+            FROM notices
+            WHERE school_id = :school_id
+            AND (dept_id IS NULL OR dept_id = :dept_id)
+            AND (title ILIKE :kw OR content ILIKE :kw)
+            ORDER BY published_at DESC
+            LIMIT :limit
+        """),
+        {
+            "school_id": school_id,
+            "dept_id":   dept_id,
+            "kw":        f"%{keyword}%",
+            "limit":     limit,
+        }
+    ).fetchall()
+    return result
