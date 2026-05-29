@@ -78,6 +78,24 @@ async def call_lm_studio(messages: list[dict]) -> str:
         return data["message"]["content"]
 
 # ─────────────────────────────────────
+# 마크다운 강조 문법 제거 (후처리)
+# ─────────────────────────────────────
+def strip_markdown(text: str) -> str:
+    """
+    LLM 답변에서 마크다운 강조 문법을 제거합니다.
+    시스템 프롬프트만으로는 모델이 마크다운을 습관적으로 생성하므로
+    출력 단계에서 강제로 제거합니다.
+    """
+    if not text:
+        return text
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'(?<!\w)_(.+?)_(?!\w)', r'\1', text)
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    return text
+
+# ─────────────────────────────────────
 # 의도 분류 (집계/최신/목록/검색)
 # ─────────────────────────────────────
 def classify_intent(message: str) -> str:
@@ -302,7 +320,7 @@ async def chat(
                         content_str += f"\n[개정 이력] {row.revision_history}"
                     reg_parts.append(content_str)
 
-            # ── 유사도 검색 (상위 5개, threshold 0.55 이상) ──
+            # ── 유사도 검색 (threshold 0.55 이상) ──
             if query_embedding:
                 # 규정성 질문이면 5개, 혼합이면 3개
                 reg_limit = 5 if query_type == "regulation" else 3
@@ -361,6 +379,7 @@ async def chat(
     # ──────────────────────────────────────
     try:
         answer = await call_lm_studio(messages)
+        answer = strip_markdown(answer)
     except httpx.ConnectError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -464,7 +483,6 @@ def remove_session(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="삭제 권한이 없습니다."
         )
-
     # ──────────────────────────────────────
     # 4-2. 세션 + 메시지 삭제
     # ──────────────────────────────────────
