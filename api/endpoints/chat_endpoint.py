@@ -60,6 +60,7 @@ async def call_lm_studio(messages: list[dict]) -> str:
             "top_p":          settings.LLM_TOP_P,
             "repeat_penalty": settings.LLM_REPEAT_PENALTY,
             "num_predict":    settings.LLM_NUM_PREDICT,
+            "num_ctx":        settings.LLM_NUM_CTX,
         }
     }
 
