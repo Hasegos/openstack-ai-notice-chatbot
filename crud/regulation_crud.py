@@ -4,19 +4,20 @@ from sqlalchemy import text
 
 from models.regulation_model import Regulation
 
+
 # ──────────────────────────────────────────────────
 # 1. 벡터 유사도 검색 (RAG)
-# cosine 유사도 기준 상위 k개 교칙 반환
+# cosine 유사도 기준 상위 k개 교칙 반환 (조항 중복 제거)
 # ──────────────────────────────────────────────────
 def search_similar_regulations(
     db: Session,
     query_embedding: List[float],
     school_id: int,
-    limit: int = 10,
+    limit: int = 5,
 ) -> list:
     """
     사용자 질문의 임베딩 벡터와 코사인 유사도가 높은 교칙을 반환합니다.
-    embedding이 NULL인 항목은 제외합니다.
+    embedding이 NULL인 항목은 제외하고, 같은 조항(title) 중복은 제거합니다.
     """
     # ──────────────────────────────
     # 1-1. float 타입 검증
@@ -30,23 +31,28 @@ def search_similar_regulations(
     embedding_str = "[" + ",".join(str(float(v)) for v in query_embedding) + "]"
 
     # ──────────────────────────────────────────────────────────
-    # 1-3. pgvector 코사인 유사도 검색
+    # 1-3. pgvector 코사인 유사도 검색 (category+title 중복 제거)
+    # 서브쿼리에서 DISTINCT ON으로 같은 조항 중복 제거 후 유사도순 정렬
     # ──────────────────────────────────────────────────────────
     result = db.execute(
         text("""
-            SELECT regulation_id, school_id, category, article_no, title, content,
-                revision_history,
-                1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
-            FROM regulations
-            WHERE school_id = :school_id
-            AND embedding IS NOT NULL
-            ORDER BY embedding <=> CAST(:embedding AS vector)
+            SELECT * FROM (
+                SELECT DISTINCT ON (category, title)
+                       regulation_id, school_id, category, article_no, title, content,
+                       revision_history,
+                       1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
+                FROM regulations
+                WHERE school_id = :school_id
+                AND embedding IS NOT NULL
+                ORDER BY category, title, embedding <=> CAST(:embedding AS vector)
+            ) sub
+            ORDER BY similarity DESC
             LIMIT :limit
         """),
         {
             "embedding": embedding_str,
             "school_id": school_id,
-            "limit": limit,
+            "limit":     limit,
         }
     ).fetchall()
 
@@ -68,7 +74,7 @@ def search_regulations_by_keyword(
     result = db.execute(
         text("""
             SELECT regulation_id, school_id, category, article_no, title, content,
-                revision_history
+                   revision_history
             FROM regulations
             WHERE school_id = :school_id
             AND (
@@ -81,8 +87,8 @@ def search_regulations_by_keyword(
         """),
         {
             "school_id": school_id,
-            "keyword": f"%{keyword}%",
-            "limit": limit,
+            "keyword":   f"%{keyword}%",
+            "limit":     limit,
         }
     ).fetchall()
 
