@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     LLM_TOP_P: float
     LLM_REPEAT_PENALTY: float
     LLM_NUM_PREDICT: int
+    LLM_NUM_CTX: int
 
     # ──────────────────────────
     # 4. 계산된 프로퍼티 (DB URL)
