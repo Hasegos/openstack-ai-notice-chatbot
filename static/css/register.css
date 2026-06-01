@@ -50,8 +50,8 @@
   border-radius: var(--radius-md);
   font-size: 13px;
   margin-bottom: 1.25rem;
-  background: rgba(196, 94, 56, 0.08);
-  border: 1px solid rgba(196, 94, 56, 0.25);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
   color: var(--accent);
 }
 
@@ -130,7 +130,7 @@
 
 .register-form__input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 94, 56, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .register-form__pw-toggle {
@@ -176,7 +176,7 @@
 
 .register-form__select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 94, 56, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .register-form__select:disabled {
