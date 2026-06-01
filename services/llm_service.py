@@ -58,6 +58,58 @@ async def call_ollama(messages: list[dict]) -> str:
         data = response.json()
         return data["message"]["content"]
 
+# ─────────────────────────────────────────────────────
+# 대화 요약 호출 (compact)
+# ─────────────────────────────────────────────────────
+async def summarize_conversation(
+    previous_summary: str,
+    messages_text: str,
+) -> str:
+    """
+    이전 요약본 + 새로 쌓인 대화를 합쳐 하나의 누적 요약본으로 압축합니다.
+    Claude의 compact와 동일한 원리로, 오래된 대화를 짧게 유지하기 위해 사용합니다.
+
+    previous_summary : 기존 요약본 (없으면 빈 문자열)
+    messages_text    : 이번에 새로 요약할 원문 대화 (역할: 내용 형식)
+    """
+    # 요약 전용 시스템 프롬프트 (RAG 시스템 프롬프트와 별개)
+    summary_system = (
+        "당신은 대화 내용을 간결하게 요약하는 역할입니다. "
+        "아래 이전 요약과 새 대화를 합쳐, 사용자가 무엇을 물었고 어떤 답변을 받았는지 "
+        "핵심만 담은 하나의 요약으로 정리하세요. "
+        "사용자의 관심 주제와 미해결 질문이 드러나도록 하고, "
+        "불필요한 인사말이나 중복은 제거하세요. 최대 500자 이내로 작성하세요."
+    )
+
+    user_content = ""
+    if previous_summary:
+        user_content += f"[이전 요약]\n{previous_summary}\n\n"
+    user_content += f"[새 대화]\n{messages_text}\n\n위 내용을 하나의 요약으로 정리하세요."
+
+    payload = {
+        "model": settings.Ollama_MODEL,
+        "messages": [
+            {"role": "system", "content": summary_system},
+            {"role": "user",   "content": user_content},
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.3,    # 요약은 일관성 위해 낮게 고정
+            "num_predict": 1024,   # 요약본은 짧으므로 작게
+            "num_ctx":     settings.LLM_NUM_CTX,
+        }
+    }
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            settings.Ollama_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["message"]["content"].strip()
+
 # ─────────────────────────────────────
 # 마크다운 강조 문법 제거 (후처리)
 # ─────────────────────────────────────
