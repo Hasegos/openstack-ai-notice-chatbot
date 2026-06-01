@@ -13,7 +13,7 @@ from crud.chat_crud import (
     get_session_by_id,
     get_messages_by_session,
 )
-from db.session import get_db
+from db.session import get_db, SessionLocal
 from models.user_model import User
 from schemas.chat_schema import ChatRequest, ChatResponse, ChatSessionOut
 
@@ -25,6 +25,7 @@ from services.rag_service import (
     build_notice_context,
     build_regulation_context,
 )
+from services.memory_service import build_memory_context, messages_to_text
 
 router = APIRouter()
 
@@ -38,115 +39,162 @@ router = APIRouter()
 )
 async def chat(
     req: ChatRequest,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     사용자 메시지를 받아 RAG 파이프라인으로 답변을 생성합니다.
     session_id가 없으면 새 세션을 자동 생성합니다.
+
+    [흐름]
+      1. 세션 처리 + 사용자 메시지 저장
+      2. RAG 검색 (공지/교칙) — 직전 대화로 검색 보강
+      3. compact — 토큰 70% 초과 시 오래된 대화 요약
+      4. 시스템 프롬프트 = SYSTEM_PROMPT + 요약본 + RAG 컨텍스트
+      5. Ollama 호출 (DB 커넥션 미점유)
+      6. 답변 저장
     """
-    # ──────────────────────────────────────
-    # 1-1. 세션 처리 (신규 or 기존)
-    # ──────────────────────────────────────
-    if req.session_id:
-        session = get_session_by_id(db, req.session_id)
-        if not session or session.user_id != current_user.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="세션을 찾을 수 없습니다."
-            )
-    else:
-        title = req.message[:20] + ("..." if len(req.message) > 20 else "")
-        session = create_session(db, current_user.user_id, title)
+    school_id = current_user.school_id
+    dept_id   = current_user.dept_id
+    user_id   = current_user.user_id
 
-    # ──────────────────────────────────────
-    # 1-2. 사용자 메시지 저장
-    # ──────────────────────────────────────
-    create_message(db, session.session_id, "user", req.message)
-
-    # ──────────────────────────────────────
-    # 1-3. 질문 분석
-    # ──────────────────────────────────────
     rag_context        = ""
     regulation_context = ""
     source_ids         = []
     query_embedding    = []
-    intent             = classify_intent(req.message)
-    query_type         = detect_query_type(req.message)
+    memory_summary     = ""
+    recent_messages    = []
+
+    intent     = classify_intent(req.message)
+    query_type = detect_query_type(req.message)
     print(f"[Intent] 분류 결과: {intent} / 질문 유형: {query_type}")
 
-    count_context = build_count_context(
-        db, current_user.school_id, current_user.dept_id
-    )
+    # ══════════════════════════════════════════════════════════
+    # DB 세션 구간 — 세션 처리 + 메시지 저장 + RAG 검색 + compact
+    # ══════════════════════════════════════════════════════════
+    with SessionLocal() as db:
+        # ── 1-1. 세션 처리 (신규 or 기존) ──
+        if req.session_id:
+            session = get_session_by_id(db, req.session_id)
+            if not session or session.user_id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="세션을 찾을 수 없습니다."
+                )
+            session_id       = session.session_id
+            prev_summary     = session.summary
+            prev_summarized  = session.summarized_until
+        else:
+            title = req.message[:20] + ("..." if len(req.message) > 20 else "")
+            session = create_session(db, user_id, title)
+            session_id       = session.session_id
+            prev_summary     = None
+            prev_summarized  = None
 
-    # ──────────────────────────────────────
-    # 1-4. 공지 검색
-    # ──────────────────────────────────────
-    try:
-        if intent == "count":
+        # ──────────────────────────────────────────
+        # 1-2. 검색 보강용 직전 대화 확보
+        # ──────────────────────────────────────────
+        prior = get_messages_by_session(db, session_id)
+        recent_context = messages_to_text(prior[-3:]) if prior else ""
+
+        # ──────────────────────────────────────────
+        # 1-3. 사용자 메시지 저장
+        # ──────────────────────────────────────────
+        create_message(db, session_id, "user", req.message)
+
+        # ──────────────────────────────────────────
+        # 1-4. 공지 현황 카운트
+        # ──────────────────────────────────────────
+        count_context = build_count_context(db, school_id, dept_id)
+
+        # ──────────────────────────────────────────
+        # 1-5. 공지 검색
+        # ──────────────────────────────────────────
+        try:
+            if intent == "count":
+                rag_context = count_context
+
+            elif intent in ("recent", "list"):
+                rag_context = build_recent_context(
+                    db,
+                    school_id=school_id,
+                    dept_id=dept_id,
+                    count_context=count_context,
+                    intent=intent,
+                    source_ids=source_ids,
+                )
+
+            else:
+                rag_context, query_embedding = await build_notice_context(
+                    db,
+                    message=req.message,
+                    school_id=school_id,
+                    dept_id=dept_id,
+                    query_type=query_type,
+                    count_context=count_context,
+                    source_ids=source_ids,
+                    recent_context=recent_context,
+                )
+
+        except Exception as e:
+            print(f"[공지 RAG] 오류 발생: {e}")
             rag_context = count_context
 
-        elif intent in ("recent", "list"):
-            rag_context = build_recent_context(
-                db,
-                school_id=current_user.school_id,
-                dept_id=current_user.dept_id,
-                count_context=count_context,
-                intent=intent,
-                source_ids=source_ids,
-            )
+        # ──────────────────────────────────────────
+        # 1-6. 교칙 검색 (규정성/혼합 질문일 때만)
+        # ──────────────────────────────────────────
+        if intent == "search" and query_type in ("regulation", "both"):
+            try:
+                regulation_context = build_regulation_context(
+                    db,
+                    message=req.message,
+                    school_id=school_id,
+                    query_type=query_type,
+                    query_embedding=query_embedding,
+                )
+            except Exception as e:
+                print(f"[교칙 RAG] 오류 발생: {e}")
 
-        else:
-            rag_context, query_embedding = await build_notice_context(
-                db,
-                message=req.message,
-                school_id=current_user.school_id,
-                dept_id=current_user.dept_id,
-                query_type=query_type,
-                count_context=count_context,
-                source_ids=source_ids,
-            )
-
-    except Exception as e:
-        print(f"[공지 RAG] 오류 발생: {e}")
-        rag_context = count_context
-
-    # ──────────────────────────────────────
-    # 1-5. 교칙 검색 (규정성/혼합 질문일 때만)
-    # ──────────────────────────────────────
-    if intent == "search" and query_type in ("regulation", "both"):
+        # ────────────────────────────────────────────────────────
+        # 1-7. compact — 대화 맥락 구성 (요약본 + 최근 메시지)
+        # ────────────────────────────────────────────────────────
+        rag_total_len = len(rag_context) + len(regulation_context)
         try:
-            regulation_context = build_regulation_context(
+            memory_summary, recent_messages = await build_memory_context(
                 db,
-                message=req.message,
-                school_id=current_user.school_id,
-                query_type=query_type,
-                query_embedding=query_embedding,
+                session_id=session_id,
+                summary=prev_summary,
+                summarized_until=prev_summarized,
+                system_prompt_len=len(settings.SYSTEM_PROMPT),
+                rag_context_len=rag_total_len,
             )
         except Exception as e:
-            print(f"[교칙 RAG] 오류 발생: {e}")
+            # compact 실패해도 답변은 진행 (요약 없이)
+            print(f"[Compact] 오류 발생, 요약 없이 진행: {e}")
+            memory_summary, recent_messages = "", []
 
-    # ──────────────────────────────────────
-    # 1-6. 대화 히스토리 + RAG 컨텍스트 구성
-    # ──────────────────────────────────────
+    # ══════════════════════════════════════════════════════════
+    # [LLM 구간] DB 커넥션을 잡지 않은 상태로 Ollama 호출
+    # ══════════════════════════════════════════════════════════
     system_content = settings.SYSTEM_PROMPT
+
+    # 이전 대화 요약본(compact) 주입
+    if memory_summary:
+        system_content += f"\n\n아래는 이 사용자와의 이전 대화 요약입니다. 맥락 파악에 참고하세요:\n\n{memory_summary}"
+
+    # RAG 컨텍스트 주입
     if rag_context:
         system_content += f"\n\n아래는 학교 공지사항 검색 결과입니다. 게시일이 가장 최근인 공지를 우선하여 답변하고, 관련 공지의 출처 URL을 반드시 함께 안내하세요:\n\n{rag_context}"
     if regulation_context:
         system_content += f"\n\n아래는 학교 교칙/정관 검색 결과입니다. 규칙 관련 질문 시 이를 우선 참고하세요:\n\n{regulation_context}"
 
-    history = get_messages_by_session(db, session.session_id)
     messages = [{"role": "system", "content": system_content}]
-    for msg in history[-10:-1]:
-        messages.append({"role": msg.role, "content": msg.content})
+    messages.extend(recent_messages)
     messages.append({"role": "user", "content": req.message})
 
     total_chars = sum(len(m["content"]) for m in messages)
     print(f"[Ollama] 총 메시지 길이: {total_chars}자, 메시지 수: {len(messages)}개")
 
-    # ──────────────────────────────────────
-    # 1-7. Ollama 호출
-    # ──────────────────────────────────────
+    # ── Ollama 호출 ──
     try:
         answer = await call_ollama(messages)
         answer = strip_markdown(answer)
@@ -167,13 +215,14 @@ async def chat(
             detail="Ollama 호출 중 오류가 발생했습니다."
         )
 
-    # ──────────────────────────────────────
-    # 1-8. 어시스턴트 응답 저장
-    # ──────────────────────────────────────
-    create_message(db, session.session_id, "assistant", answer)
+    # ══════════════════════════════════════════════════════════
+    #  DB 세션 구간 — 어시스턴트 응답 저장
+    # ══════════════════════════════════════════════════════════
+    with SessionLocal() as db:
+        create_message(db, session_id, "assistant", answer)
 
     return ChatResponse(
-        session_id=session.session_id,
+        session_id=session_id,
         answer=answer,
         sources=source_ids
     )
