@@ -9,8 +9,17 @@ class Settings(BaseSettings):
     POSTGRESQL_SERVER: str
     POSTGRESQL_PORT: str
     POSTGRESQL_DATABASE: str
-    PROJECT_NAME:str = "openstack LLM AI 챗봇"
+    PROJECT_NAME: str = "openstack LLM AI 챗봇"
+    
+    # 앱 기동 시 테이블 자동 생성 여부
+    AUTO_CREATE_TABLES: bool
 
+    # DB 커넥션 풀 설정
+    POOL_SIZE: int
+    MAX_OVERFLOW: int
+    POOL_RECYCLE: int
+    POOL_TIMEOUT: int
+    
     # ──────────────────────
     # 2. 보안 및 인증 (JWT)
     # ──────────────────────
@@ -52,6 +61,13 @@ class Settings(BaseSettings):
     LLM_REPEAT_PENALTY: float
     LLM_NUM_PREDICT: int
     LLM_NUM_CTX: int
+
+    # 토큰 추정 상수
+    CHARS_TO_TOKENS: float
+    # 요약 트리거 기준
+    SUMMARY_TRIGGER_RATIO: float
+    # compact 후 원문으로 유지할 최근 메시지 수
+    RECENT_KEEP_COUNT: int
 
     # ──────────────────────────
     # 4. 계산된 프로퍼티 (DB URL)
