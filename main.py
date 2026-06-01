@@ -12,7 +12,8 @@ from api.pages import page_router
 # 1. 데이터베이스 테이블 초기화
 # ────────────────────────────
 # 정의된 모든 SQLAlchemy 모델을 기반으로 데이터베이스 테이블을 생성합니다.
-Base.metadata.create_all(bind=engine)
+if settings.AUTO_CREATE_TABLES:
+    Base.metadata.create_all(bind=engine)
 
 # ────────────────────────────
 # 2. FastAPI 앱 인스턴스 설정
