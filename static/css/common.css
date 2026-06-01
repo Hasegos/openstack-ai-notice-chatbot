@@ -14,20 +14,20 @@
   --font-body: "Pretendard", system-ui, sans-serif;
   --font-mono: "Space Mono", monospace;
 
-  --bg:          #f8f8f6;
-  --surface:     #ffffff;
-  --peach:       #f7ddd0;
-  --peach-dark:  #f0c4aa;
-  --peach-text:  #8a4a2f;
-  --border:      #e8e4de;
-  --border-em:   #ddd6cc;
+  --bg:          #0B0F19;
+  --surface:     #161B26;
+  --peach:       rgba(255, 255, 255, 0.04);
+  --peach-dark:  rgba(255, 255, 255, 0.07);
+  --peach-text:  rgba(255, 255, 255, 0.6);
+  --border:      rgba(255, 255, 255, 0.08);
+  --border-em:   rgba(255, 255, 255, 0.15);
 
-  --text:        #1a1a18;
-  --text-muted:  #6b6760;
-  --text-dim:    #a09890;
+  --text:        #F9FAFB;
+  --text-muted:  #9CA3AF;
+  --text-dim:    #6B7280;
 
-  --accent:      #c45e38;
-  --accent-dim:  rgba(196, 94, 56, 0.10);
+  --accent:      #6366F1;
+  --accent-dim:  rgba(99, 102, 241, 0.12);
 
   --radius-sm:   4px;
   --radius-md:   8px;
@@ -140,13 +140,13 @@ code {
 
 .btn--ghost:hover {
   color: var(--text);
-  background: var(--peach);
+  background: var(--surface);
 }
 
 .btn--nav-primary {
   font-size: 13px;
   font-weight: 600;
-  color: var(--bg);
+  color: #ffffff;
   background: var(--accent);
   border-radius: var(--radius-md);
   padding: 6px 14px;
@@ -183,7 +183,7 @@ code {
 
 .btn--cta-main {
   background: var(--accent);
-  color: var(--bg);
+  color: #ffffff;
 }
 
 .btn--cta-main:hover {
