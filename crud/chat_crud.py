@@ -110,3 +110,43 @@ def delete_session(
     db.query(ChatSession).filter(ChatSession.session_id == session_id).delete()
 
     db.commit()
+    
+# ────────────────────────────────────────
+# 7. 세션 요약 저장 (Update)
+# ────────────────────────────────────────
+def update_session_summary(
+    db: Session,
+    session_id: int,
+    summary: str,
+    summarized_until: int
+):
+    """
+    세션의 요약본(summary)과 요약 완료 지점(summarized_until)을 갱신합니다.
+    summarized_until: 요약에 포함된 마지막 message_id.
+    """
+    db.query(ChatSession).filter(ChatSession.session_id == session_id).update({
+        ChatSession.summary: summary,
+        ChatSession.summarized_until: summarized_until,
+    })
+    db.commit()
+
+# ─────────────────────────────────────────────────
+# 8. 세션 메시지 조회 — 요약 지점 이후만 (Read)
+# ─────────────────────────────────────────────────
+def get_messages_after(
+    db: Session,
+    session_id: int,
+    after_message_id: Optional[int]
+):
+    """
+    summarized_until 이후에 쌓인 원문 메시지만 시간순으로 조회합니다.
+    after_message_id가 None이면 전체 메시지를 반환합니다.
+    """
+    query = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == session_id)
+    )
+    if after_message_id is not None:
+        query = query.filter(ChatMessage.message_id > after_message_id)
+
+    return query.order_by(ChatMessage.created_at.asc()).all()

@@ -66,13 +66,19 @@ async def build_notice_context(
     query_type: str,
     count_context: str,
     source_ids: list,
+    recent_context: str = "",
 ) -> tuple[str, list[float]]:
     """
     공지 유사도 검색 + 키워드 보조 검색 결과를 병합하여 컨텍스트를 생성합니다.
+    recent_context: 직전 대화 일부. "그거 언제야?" 같은 후속 질문의 대명사를
+                    해소하기 위해 검색 쿼리 앞에 붙입니다 (검색 정확도 보강).
     반환: (공지 컨텍스트 문자열, 질문 임베딩 벡터)
     """
+    # ── 검색용 쿼리 구성 (직전 대화 + 현재 질문) ──
+    search_query = f"{recent_context}\n{message}".strip() if recent_context else message
+
     # ── 공지 유사도 검색 ──────────────────────
-    query_embedding = await get_embedding(message)
+    query_embedding = await get_embedding(search_query)
     print(f"[RAG] embedding 생성 완료: {len(query_embedding)}차원")
 
     # 규정성 질문이면 공지는 적게, 그 외엔 6개
@@ -88,7 +94,7 @@ async def build_notice_context(
     print(f"[RAG] 공지 유사도 검색: {len(similar_notices)}개")
 
     # ── 공지 키워드 보조 검색 (추상적 질문 대응) ──
-    collected = {}  # notice_id → row (중복 제거)
+    collected = {}
     for row in similar_notices:
         collected[row.notice_id] = row
 
@@ -110,7 +116,6 @@ async def build_notice_context(
 
     rag_context = ""
     if collected:
-        # 최신순 정렬 (published_at 내림차순)
         merged = sorted(
             collected.values(),
             key=lambda r: r.published_at or "",
@@ -131,9 +136,9 @@ async def build_notice_context(
 
     return rag_context, query_embedding
 
-# ─────────────────────────────────────
+# ───────────────────────────────────────────
 # 교칙 검색 컨텍스트 생성 (키워드 + 유사도)
-# ─────────────────────────────────────
+# ───────────────────────────────────────────
 def build_regulation_context(
     db: Session,
     message: str,
@@ -145,7 +150,7 @@ def build_regulation_context(
     교칙 키워드 검색 + 유사도 검색 결과를 병합하여 컨텍스트를 생성합니다.
     """
     reg_parts   = []
-    seen_titles = set()  # 조항 중복 제거용
+    seen_titles = set()
 
     # ── 조항 번호 패턴 감지 → 키워드 검색 ──────
     article_keyword = extract_article_keyword(message)
