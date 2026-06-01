@@ -9,7 +9,11 @@ from core.config import settings
 # pool_pre_ping=True: 연결이 유효한지 주기적으로 체크하여 끊긴 연결을 방지합니다.
 engine = create_engine(
     settings.SQLALCHEMY_DATABASE_URL,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    pool_size=settings.POOL_SIZE,
+    max_overflow=settings.MAX_OVERFLOW,
+    pool_recycle=settings.POOL_RECYCLE,
+    pool_timeout=settings.POOL_TIMEOUT,
 )
 
 # ─────────────────────────
@@ -27,7 +31,7 @@ def get_db():
     각 요청마다 DB 세션을 생성하고, 처리가 끝나면 자동으로 닫아줍니다.
     FastAPI의 Depends(get_db)를 통해 주입받아 사용합니다.
     """
-    db =SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:

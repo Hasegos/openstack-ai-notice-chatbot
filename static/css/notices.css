@@ -63,7 +63,7 @@
 .notices__filter-btn--active {
   background: var(--accent-dim);
   color: var(--accent);
-  border-color: rgba(196, 94, 56, 0.2);
+  border-color: rgba(99, 102, 241, 0.2);
   font-weight: 600;
 }
 
@@ -134,7 +134,7 @@
 
 .notices__search:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 94, 56, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .notices__search-icon {
