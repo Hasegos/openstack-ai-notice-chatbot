@@ -18,7 +18,7 @@
 .chat__sidebar {
   display: flex;
   flex-direction: column;
-  background: var(--text);
+  background: var(--surface);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
@@ -87,10 +87,9 @@
   background: rgba(255, 255, 255, 0.07);
 }
 
-
 .chat__session-item--active {
-  background: rgba(196, 94, 56, 0.2);
-  border-color: rgba(196, 94, 56, 0.3);
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .chat__session-title {
@@ -401,7 +400,7 @@
 
 .chat__input-wrap:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 94, 56, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .chat__input {
