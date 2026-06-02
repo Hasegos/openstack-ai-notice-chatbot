@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -30,10 +30,10 @@
   gap: 8px;
   margin: 1rem;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--peach);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
   cursor: pointer;
@@ -42,8 +42,8 @@
 }
 
 .chat__new-btn:hover {
-  background: rgba(255, 255, 255, 0.13);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--peach-dark);
+  border-color: var(--border-em);
 }
 
 .chat__new-btn span {
@@ -67,7 +67,7 @@
 }
 
 .chat__session-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--peach-dark);
   border-radius: 2px;
 }
 
@@ -84,7 +84,7 @@
 }
 
 .chat__session-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--peach);
 }
 
 .chat__session-item--active {
@@ -95,14 +95,14 @@
 .chat__session-title {
   flex: 1;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .chat__session-item--active .chat__session-title {
-  color: #ffffff;
+  color: var(--text);
 }
 
 /* ── 삭제 버튼 ── */
@@ -113,7 +113,7 @@
   border-radius: var(--radius-sm);
   border: none;
   background: none;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-dim);
   font-size: 11px;
   cursor: pointer;
   display: flex;
@@ -124,14 +124,14 @@
 }
 
 .chat__session-delete:hover {
-  background: rgba(255, 100, 100, 0.2);
-  color: #ff6b6b;
+  background: rgba(220, 38, 38, 0.10);
+  color: #DC2626;
 }
 
 /* 사이드바 하단 */
 .chat__sidebar-footer {
   padding: 0.875rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border);
 }
 
 .chat__user-info {
@@ -155,7 +155,7 @@
 .chat__user-name {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -163,7 +163,7 @@
 
 .chat__user-school {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
