@@ -14,20 +14,22 @@
   --font-body: "Pretendard", system-ui, sans-serif;
   --font-mono: "Space Mono", monospace;
 
-  --bg:          #0B0F19;
-  --surface:     #161B26;
-  --peach:       rgba(255, 255, 255, 0.04);
-  --peach-dark:  rgba(255, 255, 255, 0.07);
-  --peach-text:  rgba(255, 255, 255, 0.6);
-  --border:      rgba(255, 255, 255, 0.08);
-  --border-em:   rgba(255, 255, 255, 0.15);
+  --bg:          #FFFFFF;
+  --surface:     #F9FAFB;
 
-  --text:        #F9FAFB;
-  --text-muted:  #9CA3AF;
-  --text-dim:    #6B7280;
+  --peach:       #F3F4F6;
+  --peach-dark:  #E5E7EB;
+  --peach-text:  #374151;
 
-  --accent:      #6366F1;
-  --accent-dim:  rgba(99, 102, 241, 0.12);
+  --border:      #E5E7EB;
+  --border-em:   #D1D5DB;
+
+  --text:        #111827;
+  --text-muted:  #6B7280;
+  --text-dim:    #9CA3AF;
+
+  --accent:      #4F46E5;
+  --accent-dim:  rgba(79, 70, 229, 0.12);
 
   --radius-sm:   4px;
   --radius-md:   8px;
