@@ -1,4 +1,5 @@
 import re
+import json
 import httpx
 
 from core.config import settings
@@ -57,6 +58,47 @@ async def call_ollama(messages: list[dict]) -> str:
         response.raise_for_status()
         data = response.json()
         return data["message"]["content"]
+
+# ─────────────────────────────────────────────────────
+# Ollama 스트리밍 호출
+# ─────────────────────────────────────────────────────
+async def call_ollama_stream(messages: list[dict]):
+    """
+    Ollama에 stream=True로 요청하고 토큰 청크를 async generator로 반환합니다.
+    strip_markdown은 전체 텍스트 기준 동작하므로 스트리밍에서는 적용하지 않습니다.
+    """
+    payload = {
+        "model":   settings.Ollama_MODEL,
+        "messages": messages,
+        "stream":  True,
+        "options": {
+            "temperature":    settings.LLM_TEMPERATURE,
+            "top_k":          settings.LLM_TOP_K,
+            "top_p":          settings.LLM_TOP_P,
+            "repeat_penalty": settings.LLM_REPEAT_PENALTY,
+            "num_predict":    settings.LLM_NUM_PREDICT,
+            "num_ctx":        settings.LLM_NUM_CTX,
+        }
+    }
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        async with client.stream(
+            "POST",
+            settings.Ollama_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                data = json.loads(line)
+                token = data.get("message", {}).get("content", "")
+                if token:
+                    yield token
+                if data.get("done"):
+                    return
+
 
 # ─────────────────────────────────────────────────────
 # 대화 요약 호출 (compact)
