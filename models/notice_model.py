@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import (
-    BigInteger, String, Text,
+    BigInteger, Integer, String, Text,
     TIMESTAMP, ForeignKey, func
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -21,6 +21,7 @@ class Notice(Base):
     embedding    : Mapped[Optional[List[float]]] = mapped_column(Vector(1024), nullable=True)
     published_at : Mapped[Optional[datetime]]   = mapped_column(TIMESTAMP, nullable=True)
     created_at   : Mapped[Optional[datetime]]   = mapped_column(TIMESTAMP, nullable=True, server_default=func.now())
+    view_count   : Mapped[int]                  = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     # relationships
     school      : Mapped["School"]          = relationship(back_populates="notices")
