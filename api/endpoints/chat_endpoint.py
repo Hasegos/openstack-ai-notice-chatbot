@@ -1,9 +1,14 @@
 import json
+import logging
 import httpx
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+
+from core.rate_limit import limiter
+
+logger = logging.getLogger(__name__)
 
 from core.auth import get_current_user
 from core.config import settings
@@ -39,7 +44,9 @@ router = APIRouter()
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK
 )
+@limiter.limit("10/minute")
 async def chat(
+    request: Request,
     req: ChatRequest,
     current_user: User = Depends(get_current_user)
 ):
@@ -68,7 +75,7 @@ async def chat(
 
     intent     = classify_intent(req.message)
     query_type = detect_query_type(req.message)
-    print(f"[Intent] 분류 결과: {intent} / 질문 유형: {query_type}")
+    logger.info(f"[Intent] 분류 결과: {intent} / 질문 유형: {query_type}")
 
     # ══════════════════════════════════════════════════════════
     # DB 세션 구간 — 세션 처리 + 메시지 저장 + RAG 검색 + compact
@@ -138,7 +145,7 @@ async def chat(
                 )
 
         except Exception as e:
-            print(f"[공지 RAG] 오류 발생: {e}")
+            logger.error(f"[공지 RAG] 오류 발생: {e}")
             rag_context = count_context
 
         # ──────────────────────────────────────────
@@ -154,7 +161,7 @@ async def chat(
                     query_embedding=query_embedding,
                 )
             except Exception as e:
-                print(f"[교칙 RAG] 오류 발생: {e}")
+                logger.error(f"[교칙 RAG] 오류 발생: {e}")
 
         # ────────────────────────────────────────────────────────
         # 1-7. compact — 대화 맥락 구성 (요약본 + 최근 메시지)
@@ -171,7 +178,7 @@ async def chat(
             )
         except Exception as e:
             # compact 실패해도 답변은 진행 (요약 없이)
-            print(f"[Compact] 오류 발생, 요약 없이 진행: {e}")
+            logger.warning(f"[Compact] 오류 발생, 요약 없이 진행: {e}")
             memory_summary, recent_messages = "", []
 
     # ══════════════════════════════════════════════════════════
@@ -194,7 +201,7 @@ async def chat(
     messages.append({"role": "user", "content": req.message})
 
     total_chars = sum(len(m["content"]) for m in messages)
-    print(f"[Ollama] 총 메시지 길이: {total_chars}자, 메시지 수: {len(messages)}개")
+    logger.info(f"[Ollama] 총 메시지 길이: {total_chars}자, 메시지 수: {len(messages)}개")
 
     # ── Ollama 호출 ──
     try:
@@ -211,7 +218,7 @@ async def chat(
             detail="Ollama 응답 시간이 초과되었습니다."
         )
     except Exception as e:
-        print(f"[Ollama] 오류: {e}")
+        logger.error(f"[Ollama] 오류: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ollama 호출 중 오류가 발생했습니다."
@@ -241,7 +248,9 @@ async def chat(
     "/stream",
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("10/minute")
 async def chat_stream(
+    request: Request,
     req: ChatRequest,
     current_user: User = Depends(get_current_user)
 ):
@@ -263,7 +272,7 @@ async def chat_stream(
 
     intent     = classify_intent(req.message)
     query_type = detect_query_type(req.message)
-    print(f"[Stream] 분류 결과: {intent} / 질문 유형: {query_type}")
+    logger.info(f"[Stream] 분류 결과: {intent} / 질문 유형: {query_type}")
 
     # ══════════════════════════════════════════════════════════
     # DB 세션 구간 — 세션 처리 + 메시지 저장 + RAG 검색 + compact
@@ -307,7 +316,7 @@ async def chat_stream(
                     source_ids=source_ids, recent_context=recent_context,
                 )
         except Exception as e:
-            print(f"[Stream 공지 RAG] 오류 발생: {e}")
+            logger.error(f"[Stream 공지 RAG] 오류 발생: {e}")
             rag_context = count_context
 
         if intent == "search" and query_type in ("regulation", "both"):
@@ -317,7 +326,7 @@ async def chat_stream(
                     query_type=query_type, query_embedding=query_embedding,
                 )
             except Exception as e:
-                print(f"[Stream 교칙 RAG] 오류 발생: {e}")
+                logger.error(f"[Stream 교칙 RAG] 오류 발생: {e}")
 
         rag_total_len = len(rag_context) + len(regulation_context)
         try:
@@ -328,7 +337,7 @@ async def chat_stream(
                 rag_context_len=rag_total_len,
             )
         except Exception as e:
-            print(f"[Stream Compact] 오류 발생, 요약 없이 진행: {e}")
+            logger.warning(f"[Stream Compact] 오류 발생, 요약 없이 진행: {e}")
             memory_summary, recent_messages = "", []
 
     # ══════════════════════════════════════════════════════════
@@ -359,7 +368,7 @@ async def chat_stream(
                 full_tokens.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'content': token}, ensure_ascii=False)}\n\n"
         except Exception as e:
-            print(f"[Stream LLM] 오류: {e}")
+            logger.error(f"[Stream LLM] 오류: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': '응답 생성 중 오류가 발생했습니다.'}, ensure_ascii=False)}\n\n"
             return
 
