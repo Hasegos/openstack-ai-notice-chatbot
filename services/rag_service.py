@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from crud.notice_crud import (
-    search_similar_notices,
+    rerank_vector_search,
     search_notices_by_keyword,
     count_notices,
     get_recent_notices,
@@ -84,14 +84,17 @@ async def build_notice_context(
     # 규정성 질문이면 공지는 적게, 그 외엔 6개
     notice_limit = 3 if query_type == "regulation" else 6
 
-    similar_notices = search_similar_notices(
+    # re-ranking: 내부 Top-20 후보 → CrossEncoder 재평가 → Top-k 반환
+    # CrossEncoder 연산(~50~200ms)만큼 첫 SSE 토큰 도달 시간(TTFT)이 늘어남
+    similar_notices = rerank_vector_search(
         db,
+        query_text=search_query,
         query_embedding=query_embedding,
         school_id=school_id,
         dept_id=dept_id,
-        limit=notice_limit
+        top_k=notice_limit,
     )
-    print(f"[RAG] 공지 유사도 검색: {len(similar_notices)}개")
+    print(f"[RAG] 공지 re-ranking 완료: {len(similar_notices)}개")
 
     # ── 공지 키워드 보조 검색 (추상적 질문 대응) ──
     collected = {}

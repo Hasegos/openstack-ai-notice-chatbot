@@ -21,3 +21,6 @@ pydantic[email]==2.11.3
 
 # ── HTTP Client (LLM / Embedding 호출) ───
 httpx==0.28.1
+
+# ── Reranking ─────────────────────────────
+sentence-transformers==3.0.1
