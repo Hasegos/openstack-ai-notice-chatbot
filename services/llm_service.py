@@ -1,16 +1,31 @@
 import re
 import json
+import logging
 import httpx
 
 from core.config import settings
+from core.cache import get_cached_embedding, set_cached_embedding
+
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────
-# 임베딩 API 호출
+# 임베딩 API 호출 (Redis 캐시 적용)
 # ─────────────────────────────────────────────────────
 async def get_embedding(text: str) -> list[float]:
     """
-    임베딩 API를 호출하여 텍스트의 벡터를 반환합니다.
+    임베딩 벡터를 반환합니다.
+    Redis 캐시 HIT → 즉시 반환 / MISS → BGE-M3 호출 후 캐시 저장.
+    Redis 장애 시에도 BGE-M3 직접 호출로 fallback.
     """
+    # ── 캐시 조회 ──
+    cached = await get_cached_embedding(text)
+    if cached is not None:
+        logger.info(f"[Cache HIT] embedding: {text[:50]!r}")
+        return cached
+
+    logger.info(f"[Cache MISS] embedding: {text[:50]!r}")
+
+    # ── BGE-M3 임베딩 서버 호출 ──
     payload = {
         "model": settings.EMBEDDING_MODEL,
         "prompt": text,
@@ -23,7 +38,11 @@ async def get_embedding(text: str) -> list[float]:
         )
         response.raise_for_status()
         data = response.json()
-        return data["embedding"]
+        embedding = data["embedding"]
+
+    # ── 캐시 저장 (TTL 24시간) ──
+    await set_cached_embedding(text, embedding)
+    return embedding
 
 # ─────────────────────────────────────────────────────
 # Ollama 호출
