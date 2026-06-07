@@ -50,7 +50,13 @@ def build_recent_context(
     )
     lines = []
     for n in recent:
-        source_ids.append(n.notice_id)
+        source_ids.append({
+            "id": n.notice_id,
+            "title": n.title,
+            "dept_name": "학과 공지" if n.dept_id else "학교 공지",
+            "created_at": n.published_at.isoformat() if n.published_at else None,
+            "source_url": n.source_url,
+        })
         date = n.published_at.strftime("%Y.%m.%d") if n.published_at else "날짜 미상"
         lines.append(f"- [{date}] {n.title} ({n.source_url or ''})")
     return count_context + "\n\n[최근 공지 목록]\n" + "\n".join(lines)
@@ -83,7 +89,6 @@ async def build_notice_context(
 
     # 규정성 질문이면 공지는 적게, 그 외엔 6개
     notice_limit = 3 if query_type == "regulation" else 6
-
     similar_notices = search_similar_notices(
         db,
         query_embedding=query_embedding,
@@ -123,7 +128,13 @@ async def build_notice_context(
         )
         context_parts = [count_context]
         for row in merged:
-            source_ids.append(row.notice_id)
+            source_ids.append({
+                "id": row.notice_id,
+                "title": row.title,
+                "dept_name": "학과 공지" if row.dept_id else "학교 공지",
+                "created_at": row.published_at.isoformat() if row.published_at else None,
+                "source_url": row.source_url,
+            })
             date = row.published_at.strftime("%Y.%m.%d") if row.published_at else "날짜 미상"
             content_preview = (row.content or "")[:500]
             context_parts.append(

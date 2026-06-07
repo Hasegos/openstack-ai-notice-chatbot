@@ -198,11 +198,11 @@ function removeLoadingBubble() {
 }
 
 /**
- * ───────────────────
- * 9. 메시지 전송
- * ───────────────────
+ * ──────────────────────────────────
+ * 9. 메시지 전송 (스트리밍)
+ * ──────────────────────────────────
  */
-async function sendMessage(message) {
+async function sendMessageStream(message) {
     if (!message.trim() || isLoading) return;
 
     isLoading = true;
@@ -212,32 +212,71 @@ async function sendMessage(message) {
 
     appendMessage("user", message);
     scrollToBottom();
-    appendLoadingBubble();
+
+    const assistantWrapper = appendMessage("assistant", "");
+    const bubble = assistantWrapper.querySelector(".chat__message-bubble");
+    scrollToBottom();
 
     try {
-        const data = await apiRequest("/api/chat", {
+        const response = await fetch("/api/chat/stream", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
             body: JSON.stringify({
                 session_id: currentSessionId || null,
                 message: message,
             }),
         });
 
-        removeLoadingBubble();
-
-        if (!currentSessionId) {
-            currentSessionId = data.session_id;
-            await loadSessions();
-            chatTitle.textContent = message.slice(0, 20) + (message.length > 20 ? "..." : "");
+        if (!response.ok) {
+            throw new Error("서버 오류가 발생했습니다.");
         }
 
-        appendMessage("assistant", data.answer);
-        scrollToBottom();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // 불완전한 줄이 청크 경계에 걸칠 수 있으므로 버퍼에 누적 후 분리
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop(); // 마지막 불완전한 줄은 다음 청크와 합침
+
+            for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+                const raw = line.slice(6).trim();
+
+                if (raw === "[DONE]") break;
+
+                try {
+                    const event = JSON.parse(raw);
+
+                    if (event.type === "meta") {
+                        // 새 세션인 경우 session_id 확보 + 사이드바 갱신
+                        if (!currentSessionId) {
+                            currentSessionId = event.session_id;
+                            await loadSessions();
+                            chatTitle.textContent = message.slice(0, 20) + (message.length > 20 ? "..." : "");
+                        }
+                        renderSourceCards(event.sources);
+                    } else if (event.type === "token") {
+                        bubble.textContent += event.content;
+                        scrollToBottom();
+                    } else if (event.type === "error") {
+                        bubble.textContent = event.message || "오류가 발생했습니다.";
+                        scrollToBottom();
+                    }
+                } catch {
+                    // JSON 파싱 실패한 줄은 무시
+                }
+            }
+        }
 
     } catch (err) {
-        removeLoadingBubble();
-        appendMessage("assistant", err.message || "오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        bubble.textContent = err.message || "오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         scrollToBottom();
     } finally {
         isLoading = false;
@@ -294,16 +333,81 @@ function scrollToBottom() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+/**
+ * ──────────────────────────────────
+ * 14. 출처 카드 렌더링
+ * ──────────────────────────────────
+ */
+function renderSourceCards(sources) {
+    // 기존 카드 컨테이너 제거
+    const existing = document.getElementById("source-cards");
+    if (existing) existing.remove();
+
+    if (!sources || sources.length === 0) return;
+
+    // 컨테이너
+    const container = document.createElement("div");
+    container.id = "source-cards";
+    container.className = "chat__source-cards";
+
+    // 레이블
+    const label = document.createElement("p");
+    label.className = "chat__source-label";
+    label.textContent = "참고 공지";
+    container.appendChild(label);
+
+    // 카드 행
+    const row = document.createElement("div");
+    row.className = "chat__source-row";
+
+    sources.forEach(src => {
+        const card = document.createElement("button");
+        card.className = "chat__source-card";
+        card.type = "button";
+
+        const title = document.createElement("span");
+        title.className = "chat__source-card__title";
+        title.textContent = src.title;
+
+        const meta = document.createElement("span");
+        meta.className = "chat__source-card__meta";
+        // created_at이 ISO 문자열이면 날짜 부분만 표시
+        const dateStr = src.created_at ? src.created_at.slice(0, 10) : "";
+        meta.textContent = `${src.dept_name} · ${dateStr}`;
+
+        card.appendChild(title);
+        card.appendChild(meta);
+        card.addEventListener("click", () => {
+            if (src.source_url) {
+                window.open(src.source_url, "_blank", "noopener,noreferrer");
+            }
+        });
+
+        row.appendChild(card);
+    });
+
+    container.appendChild(row);
+
+    // 마지막 .chat__message 다음에 삽입
+    const messages = chatMessages.querySelectorAll(".chat__message");
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage) {
+        lastMessage.insertAdjacentElement("afterend", container);
+    } else {
+        chatMessages.appendChild(container);
+    }
+}
+
 // ── 이벤트 리스너 ──
 
 sendBtn.addEventListener("click", () => {
-    sendMessage(chatInput.value.trim());
+    sendMessageStream(chatInput.value.trim());
 });
 
 chatInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendMessage(chatInput.value.trim());
+        sendMessageStream(chatInput.value.trim());
     }
 });
 
@@ -318,7 +422,7 @@ newChatBtn.addEventListener("click", startNewChat);
 document.querySelectorAll(".chat__example-btn").forEach(btn => {
     btn.addEventListener("click", () => {
         const msg = btn.dataset.msg;
-        if (msg) sendMessage(msg);
+        if (msg) sendMessageStream(msg);
     });
 });
 
