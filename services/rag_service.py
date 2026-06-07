@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.orm import Session
 
 from crud.notice_crud import (
@@ -10,12 +12,52 @@ from crud.regulation_crud import (
     search_similar_regulations,
     search_regulations_by_keyword,
 )
-from services.llm_service import get_embedding
+from services.llm_service import get_embedding, call_ollama
 from services.query_parser import (
     extract_notice_keywords,
     extract_article_keyword,
     extract_year_keyword,
 )
+
+# ─────────────────────────────────────────────────────────────
+# 쿼리 확장 — 구어체 질문 → 공식 행정 용어 4개 (LLM 호출)
+# ─────────────────────────────────────────────────────────────
+async def expand_query(query_text: str) -> list[str]:
+    """
+    구어체/단어 단위 쿼리를 공식 행정 용어로 확장합니다.
+    LLM 서버 미응답, JSON 파싱 실패 등 모든 예외 상황에서 [] 반환.
+    호출 실패해도 원본 쿼리 검색은 계속 진행됩니다.
+    """
+    system_prompt = (
+        "당신은 대학교 공지사항 검색 시스템의 쿼리 확장 모듈입니다.\n"
+        "사용자 질문을 분석해 공지사항 검색에 도움이 될 관련 키워드를 생성합니다."
+    )
+    user_prompt = (
+        "다음 질문에 대해 공지사항 검색에 도움이 될 관련 키워드 4개를 생성하세요.\n"
+        "반드시 JSON 배열 형식으로만 응답하고, 설명은 포함하지 마세요.\n"
+        f"질문: {query_text}\n"
+        '응답 형식: ["키워드1", "키워드2", "키워드3", "키워드4"]\n'
+        "규칙:\n"
+        "- 원래 질문의 의미를 유지하는 공식적 행정 용어 포함\n"
+        "- 학교 공지에 실제 사용되는 표현 위주\n"
+        "- 불필요한 조사나 어미는 제거\n"
+        "예시 입력: '수업 빠져도 돼?'\n"
+        '예시 출력: ["출석 인정", "결석 처리", "출결 관리", "수업 불참"]'
+    )
+    try:
+        raw = await call_ollama([
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_prompt},
+        ])
+        # LLM이 코드블록·설명 텍스트를 포함할 수 있으므로 [ ... ] 부분만 추출
+        start = raw.index("[")
+        end   = raw.rindex("]") + 1
+        keywords = json.loads(raw[start:end])
+        if isinstance(keywords, list):
+            return [str(k) for k in keywords if k]
+        return []
+    except Exception:
+        return []
 
 # ─────────────────────────────────────
 # 공지 현황 카운트 컨텍스트 생성
@@ -77,29 +119,36 @@ async def build_notice_context(
     # ── 검색용 쿼리 구성 (직전 대화 + 현재 질문) ──
     search_query = f"{recent_context}\n{message}".strip() if recent_context else message
 
-    # ── 공지 유사도 검색 ──────────────────────
+    # ── 쿼리 확장 (구어체 → 공식 행정 용어, 실패 시 [] fallback) ──
+    expanded_keywords = await expand_query(message)
+    all_queries = [search_query] + expanded_keywords
+    if expanded_keywords:
+        print(f"[RAG] 쿼리 확장 결과: {expanded_keywords}")
+
+    # ── 임베딩은 원본 쿼리로 1회만 생성 ──
     query_embedding = await get_embedding(search_query)
     print(f"[RAG] embedding 생성 완료: {len(query_embedding)}차원")
 
     # 규정성 질문이면 공지는 적게, 그 외엔 6개
     notice_limit = 3 if query_type == "regulation" else 6
 
-    # re-ranking: 내부 Top-20 후보 → CrossEncoder 재평가 → Top-k 반환
-    # CrossEncoder 연산(~50~200ms)만큼 첫 SSE 토큰 도달 시간(TTFT)이 늘어남
-    similar_notices = rerank_vector_search(
-        db,
-        query_text=search_query,
-        query_embedding=query_embedding,
-        school_id=school_id,
-        dept_id=dept_id,
-        top_k=notice_limit,
-    )
-    print(f"[RAG] 공지 re-ranking 완료: {len(similar_notices)}개")
-
-    # ── 공지 키워드 보조 검색 (추상적 질문 대응) ──
+    # all_queries 각각으로 re-ranking 검색 후 notice_id 기준 중복 제거
+    # 원본 쿼리는 full notice_limit, 확장 키워드는 최대 3개씩 추가
     collected = {}
-    for row in similar_notices:
-        collected[row.notice_id] = row
+    for i, q in enumerate(all_queries):
+        k = notice_limit if i == 0 else min(3, notice_limit)
+        results = rerank_vector_search(
+            db,
+            query_text=q,
+            query_embedding=query_embedding,
+            school_id=school_id,
+            dept_id=dept_id,
+            top_k=k,
+        )
+        for row in results:
+            if row.notice_id not in collected:
+                collected[row.notice_id] = row
+    print(f"[RAG] 공지 re-ranking 완료 (확장 포함): {len(collected)}개 후보")
 
     keywords = extract_notice_keywords(message)
     if keywords:
