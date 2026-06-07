@@ -37,6 +37,8 @@ services:
       TZ: Asia/Seoul
     ports:
       - "8000:8000"
+    volumes:
+      - ./logs:/app/logs           # 로그 파일 호스트에 보존 (컨테이너 재시작 후에도 유지)
     depends_on:
       db:
         condition: service_healthy

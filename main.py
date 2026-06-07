@@ -1,10 +1,16 @@
+from core.logging_config import setup_logging
+setup_logging()  # 다른 모듈의 logger 사용 전에 핸들러 등록
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from db.session import engine
 from db.base import Base
 from core.config import settings
 from core.exception import install_errors
+from core.rate_limit import limiter, rate_limit_handler
 from api.routers import api_router
 from api.pages import page_router
 
@@ -23,6 +29,13 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None
 )
+
+# ──────────────────────────────
+# Rate Limiting 미들웨어 등록
+# ──────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # ──────────────────────────
 # 3. 정적 파일 및 라우터 설정

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from slowapi.util import get_remote_address
 
 from core.auth import get_current_user
+from core.rate_limit import limiter
 from core.security import create_access_token
 from crud.user_crud import authenticate_user, create_user, get_user_by_email
 from db.session import get_db
@@ -48,7 +50,9 @@ def register(
     "/login",
     status_code=status.HTTP_200_OK
 )
+@limiter.limit("5/minute", key_func=get_remote_address)
 def login(
+    request: Request,
     user_in: UserLogin,
     response: Response,
     db: Session = Depends(get_db)

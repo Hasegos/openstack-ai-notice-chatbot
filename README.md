@@ -162,12 +162,12 @@
 | 🏢 학과 목록 조회 | GET | /api/schools/{school_id}/departments | 학교별 학과 목록 반환 | 🔓 모두 가능 |
 | 📋 공지 목록 조회 | GET | /api/notices | 학교 공지 + 내 학과 공지 목록 | 🔐 로그인 필요 |
 | 📄 공지 상세 조회 | GET | /api/notices/{notice_id} | 공지 상세 본문 (타학교 403 차단) | 🔐 로그인 필요 |
-| 💬 채팅 메시지 전송 | POST | /api/chat | 질문 전송 → 의도·유형 분류 → RAG(공지/교칙) → compact → LLM 응답 | 🔐 로그인 필요 |
+| 💬 채팅 메시지 전송 | POST | /api/chat/stream | 질문 전송 → 의도·유형 분류 → RAG(공지/교칙) → compact → LLM 응답 | 🔐 로그인 필요 |
 | 📂 세션 목록 조회 | GET | /api/chat/sessions | 내 채팅 세션 목록 | 🔐 로그인 필요 |
 | 📂 세션 상세 조회 | GET | /api/chat/sessions/{session_id} | 세션 메시지 목록 포함 상세 | 🔐 로그인 필요 |
 | 🗑️ 세션 삭제 | DELETE | /api/chat/sessions/{session_id} | 세션 + 메시지 삭제 (소유권 검증) | 🔐 로그인 필요 |
 
-### 💬 채팅 파이프라인 (`POST /api/chat`)
+### 💬 채팅 파이프라인 (`POST /api/chat/stream`)
 
 질문 한 건이 처리되는 순서:
 

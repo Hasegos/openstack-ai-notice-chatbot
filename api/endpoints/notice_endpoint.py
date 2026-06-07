@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from core.auth import get_current_user
+from core.rate_limit import limiter
 from crud.notice_crud import get_notice_by_id, get_notices_by_dept, get_notices_by_school
 from db.session import get_db
 from models.user_model import User
@@ -17,7 +18,9 @@ router = APIRouter()
     response_model=list[NoticeOut],
     status_code=status.HTTP_200_OK
 )
+@limiter.limit("60/minute")
 def get_notices(
+    request: Request,
     skip: int = 0,
     limit: int = 20,
     dept: bool = False,
@@ -53,7 +56,9 @@ def get_notices(
     response_model=NoticeDetail,
     status_code=status.HTTP_200_OK
 )
+@limiter.limit("60/minute")
 def get_notice(
+    request: Request,
     notice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
