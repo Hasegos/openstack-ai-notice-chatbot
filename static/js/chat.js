@@ -198,56 +198,8 @@ function removeLoadingBubble() {
 }
 
 /**
- * ───────────────────
- * 9. 메시지 전송
- * ───────────────────
- */
-async function sendMessage(message) {
-    if (!message.trim() || isLoading) return;
-
-    isLoading = true;
-    sendBtn.disabled = true;
-    chatInput.value = "";
-    chatInput.style.height = "auto";
-
-    appendMessage("user", message);
-    scrollToBottom();
-    appendLoadingBubble();
-
-    try {
-        const data = await apiRequest("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                session_id: currentSessionId || null,
-                message: message,
-            }),
-        });
-
-        removeLoadingBubble();
-
-        if (!currentSessionId) {
-            currentSessionId = data.session_id;
-            await loadSessions();
-            chatTitle.textContent = message.slice(0, 20) + (message.length > 20 ? "..." : "");
-        }
-
-        appendMessage("assistant", data.answer);
-        scrollToBottom();
-
-    } catch (err) {
-        removeLoadingBubble();
-        appendMessage("assistant", err.message || "오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-        scrollToBottom();
-    } finally {
-        isLoading = false;
-        updateSendButton();
-    }
-}
-
-/**
  * ──────────────────────────────────
- * 10. 메시지 전송 (스트리밍)
+ * 9. 메시지 전송 (스트리밍)
  * ──────────────────────────────────
  */
 async function sendMessageStream(message) {
@@ -261,7 +213,6 @@ async function sendMessageStream(message) {
     appendMessage("user", message);
     scrollToBottom();
 
-    // 빈 말풍선 먼저 추가 — 이후 토큰으로 점진적으로 채움
     const assistantWrapper = appendMessage("assistant", "");
     const bubble = assistantWrapper.querySelector(".chat__message-bubble");
     scrollToBottom();
@@ -335,7 +286,7 @@ async function sendMessageStream(message) {
 
 /**
  * ────────────────
- * 11. 새 채팅
+ * 10. 새 채팅
  * ────────────────
  */
 function startNewChat() {
@@ -354,7 +305,7 @@ function startNewChat() {
 
 /**
  * ──────────────────────────────────
- * 12. 활성 세션 표시 업데이트
+ * 11. 활성 세션 표시 업데이트
  * ──────────────────────────────────
  */
 function updateActiveSession(sessionId) {
@@ -366,7 +317,7 @@ function updateActiveSession(sessionId) {
 
 /**
  * ──────────────────────────────────
- * 13. 전송 버튼 활성화 제어
+ * 12. 전송 버튼 활성화 제어
  * ──────────────────────────────────
  */
 function updateSendButton() {
@@ -375,7 +326,7 @@ function updateSendButton() {
 
 /**
  * ──────────────────────────────────
- * 14. 스크롤 최하단 이동
+ * 13. 스크롤 최하단 이동
  * ──────────────────────────────────
  */
 function scrollToBottom() {
@@ -384,7 +335,7 @@ function scrollToBottom() {
 
 /**
  * ──────────────────────────────────
- * 15. 출처 카드 렌더링
+ * 14. 출처 카드 렌더링
  * ──────────────────────────────────
  */
 function renderSourceCards(sources) {
@@ -426,7 +377,11 @@ function renderSourceCards(sources) {
 
         card.appendChild(title);
         card.appendChild(meta);
-        card.addEventListener("click", () => openNoticeModal(src.id));
+        card.addEventListener("click", () => {
+            if (src.source_url) {
+                window.open(src.source_url, "_blank", "noopener,noreferrer");
+            }
+        });
 
         row.appendChild(card);
     });
