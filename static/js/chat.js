@@ -310,6 +310,7 @@ async function sendMessageStream(message) {
                             await loadSessions();
                             chatTitle.textContent = message.slice(0, 20) + (message.length > 20 ? "..." : "");
                         }
+                        renderSourceCards(event.sources);
                     } else if (event.type === "token") {
                         bubble.textContent += event.content;
                         scrollToBottom();
@@ -379,6 +380,67 @@ function updateSendButton() {
  */
 function scrollToBottom() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * ──────────────────────────────────
+ * 15. 출처 카드 렌더링
+ * ──────────────────────────────────
+ */
+function renderSourceCards(sources) {
+    // 기존 카드 컨테이너 제거
+    const existing = document.getElementById("source-cards");
+    if (existing) existing.remove();
+
+    if (!sources || sources.length === 0) return;
+
+    // 컨테이너
+    const container = document.createElement("div");
+    container.id = "source-cards";
+    container.className = "chat__source-cards";
+
+    // 레이블
+    const label = document.createElement("p");
+    label.className = "chat__source-label";
+    label.textContent = "참고 공지";
+    container.appendChild(label);
+
+    // 카드 행
+    const row = document.createElement("div");
+    row.className = "chat__source-row";
+
+    sources.forEach(src => {
+        const card = document.createElement("button");
+        card.className = "chat__source-card";
+        card.type = "button";
+
+        const title = document.createElement("span");
+        title.className = "chat__source-card__title";
+        title.textContent = src.title;
+
+        const meta = document.createElement("span");
+        meta.className = "chat__source-card__meta";
+        // created_at이 ISO 문자열이면 날짜 부분만 표시
+        const dateStr = src.created_at ? src.created_at.slice(0, 10) : "";
+        meta.textContent = `${src.dept_name} · ${dateStr}`;
+
+        card.appendChild(title);
+        card.appendChild(meta);
+        card.addEventListener("click", () => openNoticeModal(src.id));
+
+        row.appendChild(card);
+    });
+
+    container.appendChild(row);
+
+    // 마지막 .chat__message 다음에 삽입
+    const messages = chatMessages.querySelectorAll(".chat__message");
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage) {
+        lastMessage.insertAdjacentElement("afterend", container);
+    } else {
+        chatMessages.appendChild(container);
+    }
 }
 
 // ── 이벤트 리스너 ──

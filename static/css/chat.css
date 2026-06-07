@@ -375,6 +375,70 @@
 }
 
 /* ══════════════════════════
+  chat__source-cards (Element) — 출처 카드
+  ══════════════════════════ */
+.chat__source-cards {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 720px;
+}
+
+.chat__source-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+.chat__source-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat__source-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 240px;
+  max-width: 240px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.chat__source-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+}
+
+.chat__source-card__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat__source-card__meta {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══════════════════════════
   chat__input-area (Element)
   ══════════════════════════ */
 .chat__input-area {
