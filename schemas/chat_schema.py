@@ -39,15 +39,3 @@ class ChatSessionOut(BaseModel):
     messages   : List[ChatMessageOut] = []
 
     model_config = {"from_attributes": True}
-
-# ─────────────────────────
-# 4. 채팅 응답 스키마
-# ─────────────────────────
-class ChatResponse(BaseModel):
-    """
-    챗봇이 질문에 답변할 때 반환하는 데이터 구조입니다.
-    RAG로 참조한 공지사항 출처도 함께 반환합니다.
-    """
-    session_id : int
-    answer     : str
-    sources    : List[int] = []
