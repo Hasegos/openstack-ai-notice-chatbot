@@ -25,18 +25,7 @@ services:
       retries: 5
 
   # ─────────────────────────────
-  # 2. Redis (임베딩 캐시)
-  # ─────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: noticebot_redis
-    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-  # ─────────────────────────────
-  # 3. FastAPI
+  # 2. FastAPI
   # ─────────────────────────────
   api:
     build: .
@@ -53,12 +42,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
     restart: unless-stopped
 
   # ─────────────────────────────
-  # 4. Nginx (리버스 프록시)
+  # 3. Nginx (리버스 프록시)
   # ─────────────────────────────
   nginx:
     image: nginx:1.27-alpine
@@ -73,4 +60,3 @@ services:
 
 volumes:
   db_data:
-  redis_data:
