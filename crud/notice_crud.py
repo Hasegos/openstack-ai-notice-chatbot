@@ -1,12 +1,8 @@
 from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
-from sentence_transformers import CrossEncoder
 
 from models.notice_model import Notice
-
-# 앱 기동 시 1회 로드 — 워커 수만큼 메모리 소비(약 1.1GB × 워커 수) 유의
-_reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
 
 # ──────────────────────────────────────────
 # 1. 학교별 공지 목록 조회 (Read)
@@ -123,61 +119,8 @@ def search_similar_notices(
 
     return result
 
-# ────────────────────────────────────────────────────────────────
-# 5. Re-ranking 벡터 검색 (Two-stage retrieval)
-# 1단계: 벡터 검색 Top-20 후보 → 2단계: CrossEncoder Top-k 반환
-# ────────────────────────────────────────────────────────────────
-def rerank_vector_search(
-    db: Session,
-    query_text: str,
-    query_embedding: List[float],
-    school_id: int,
-    dept_id: int = None,
-    top_k: int = 5,
-) -> List:
-    """
-    Two-stage retrieval:
-      1단계 — 벡터 유사도로 Top-20 후보 추출 (recall 확보)
-      2단계 — CrossEncoder(bge-reranker-v2-m3)로 재평가 후 Top-k 반환 (precision 향상)
-    CrossEncoder 오류 시 벡터 검색 결과를 그대로 반환(fallback).
-    """
-    # ──────────────────────────────
-    # 5-1. 1단계: Top-20 후보 추출
-    # ──────────────────────────────
-    candidates = search_similar_notices(
-        db=db,
-        query_embedding=query_embedding,
-        school_id=school_id,
-        dept_id=dept_id,
-        limit=20,
-    )
-    if not candidates:
-        return []
-
-    try:
-        # ────────────────────────────────────────────────────────
-        # 5-2. 2단계: CrossEncoder 입력 쌍 구성
-        # bge-reranker-v2-m3 최대 512 토큰 — content 앞 200자로 제한
-        # ────────────────────────────────────────────────────────
-        pairs = [
-            [query_text, f"{row.title} {(row.content or '')[:200]}"]
-            for row in candidates
-        ]
-        scores = _reranker.predict(pairs)
-
-        # ──────────────────────────────────────────────
-        # 5-3. 점수 내림차순 정렬 후 Top-k 반환
-        # ──────────────────────────────────────────────
-        ranked = sorted(zip(scores, candidates), key=lambda x: x[0], reverse=True)
-        return [notice for _, notice in ranked[:top_k]]
-
-    except Exception:
-        # CrossEncoder 실패 시 벡터 검색 결과 상위 top_k 그대로 반환
-        return list(candidates[:top_k])
-
-
 # ──────────────────────────────────────────
-# 6. 공지 개수 집계 (Read)
+# 5. 공지 개수 집계 (Read)
 # ──────────────────────────────────────────
 def count_notices(
     db: Session,
@@ -188,7 +131,7 @@ def count_notices(
     from sqlalchemy import func
 
     # ──────────────────────────────
-    # 6-1. 학교 공지 수 (dept_id=NULL)
+    # 5-1. 학교 공지 수 (dept_id=NULL)
     # ──────────────────────────────
     school_count = (
         db.query(func.count(Notice.notice_id))
@@ -197,7 +140,7 @@ def count_notices(
     )
 
     # ──────────────────────────────
-    # 6-2. 학과 공지 수
+    # 5-2. 학과 공지 수
     # ──────────────────────────────
     dept_count = (
         db.query(func.count(Notice.notice_id))
@@ -212,7 +155,7 @@ def count_notices(
     }
 
 # ──────────────────────────────────────────
-# 7. 최신 공지 목록 조회 (Read)
+# 6. 최신 공지 목록 조회 (Read)
 # ──────────────────────────────────────────
 def get_recent_notices(
     db: Session,
@@ -224,7 +167,7 @@ def get_recent_notices(
     from sqlalchemy import or_
 
     # ──────────────────────────────────────────────────────────
-    # 7-1. 학교 공지 + 내 학과 공지 필터 후 최신순 정렬
+    # 6-1. 학교 공지 + 내 학과 공지 필터 후 최신순 정렬
     # ──────────────────────────────────────────────────────────
     return (
         db.query(Notice)
@@ -238,7 +181,7 @@ def get_recent_notices(
     )
 
 # ──────────────────────────────────────────
-# 8. 공지 키워드 검색 (유사도 보조)
+# 7. 공지 키워드 검색 (유사도 보조)
 # 제목/본문에서 키워드 직접 검색
 # ──────────────────────────────────────────
 def search_notices_by_keyword(
