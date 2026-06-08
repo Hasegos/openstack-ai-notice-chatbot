@@ -85,7 +85,7 @@ def login(
         value=access_token,
         httponly=True,   # JS에서 접근 불가 (XSS 방어)
         samesite="lax",  # CSRF 방어
-        secure=False,    # 로컬 개발용 (배포 시 True로 변경)
+        secure=True,    # 로컬 개발용 (배포 시 True로 변경)
     )
 
     # ──────────────────────────────

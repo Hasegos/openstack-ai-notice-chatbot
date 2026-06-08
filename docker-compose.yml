@@ -15,8 +15,6 @@ services:
       TZ: Asia/Seoul
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -35,8 +33,6 @@ services:
     environment:
       POSTGRESQL_SERVER: db        # 컨테이너명으로 DB 접근
       TZ: Asia/Seoul
-    ports:
-      - "8000:8000"
     volumes:
       - ./logs:/app/logs           # 로그 파일 호스트에 보존 (컨테이너 재시작 후에도 유지)
     depends_on:
@@ -52,8 +48,10 @@ services:
     container_name: noticebot_nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - api
     restart: unless-stopped
