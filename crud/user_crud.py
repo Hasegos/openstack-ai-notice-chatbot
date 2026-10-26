@@ -1,5 +1,9 @@
+import secrets
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from models.department_model import Department
 from models.user_model import User
 from core.security import verify_password, get_password_hash
 from schemas.user_schema import UserCreate
@@ -77,4 +81,47 @@ def authenticate_user(
     if not verify_password(password, db_user.hashed_password):
         return False
 
+    return db_user
+
+# ──────────────────────────────────────────
+# 5. UC Info 앱 사용자 조회/생성 (섀도 계정)
+# ──────────────────────────────────────────
+def get_or_create_ucinfo_user(
+    db: Session,
+    student_id: str,
+    dept: Department
+):
+    """
+    UC Info 앱 학번으로 챗봇 사용자를 조회하고, 없으면 섀도 계정을 생성합니다.
+    email은 'uc:{학번}' 형식이라 웹 로그인 이메일 검증을 통과하지 못하므로 웹 로그인은 불가능합니다.
+    학과가 바뀐 경우 dept_id를 갱신합니다.
+    """
+    email = f"uc:{student_id}"
+
+    # 5-1. 기존 사용자 조회 + 학과 변경 반영
+    db_user = get_user_by_email(db, email)
+    if db_user:
+        if db_user.dept_id != dept.dept_id:
+            db_user.dept_id = dept.dept_id
+            db.commit()
+            db.refresh(db_user)
+        return db_user
+
+    # 5-2. 섀도 계정 생성 (비밀번호는 아무도 모르는 임의값)
+    db_user = User(
+        email           = email,
+        hashed_password = get_password_hash(secrets.token_urlsafe(32)),
+        student_name    = "UC Info",
+        student_number  = student_id,
+        school_id       = dept.school_id,
+        dept_id         = dept.dept_id,
+    )
+    db.add(db_user)
+    try:
+        db.commit()
+    except IntegrityError:
+        # 동시 첫 요청으로 이미 생성된 경우
+        db.rollback()
+        return get_user_by_email(db, email)
+    db.refresh(db_user)
     return db_user
