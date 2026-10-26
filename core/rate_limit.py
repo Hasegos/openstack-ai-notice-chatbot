@@ -15,9 +15,20 @@ logger = logging.getLogger(__name__)
 def _get_user_key(request: Request) -> str:
     """
     JWT 쿠키에서 사용자 이메일(sub)을 추출해 rate limit 키로 사용합니다.
+    UC Info 앱 Bearer 토큰은 'uc:{학번}'을 키로 사용합니다 (프록시 뒤라 IP가 모두 같기 때문).
     토큰이 없거나 디코딩 실패 시 IP 주소로 fallback합니다.
     서명 검증은 get_current_user 의존성에서 이미 수행하므로 여기서는 생략합니다.
     """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            payload = jwt.decode(auth_header[7:], options={"verify_signature": False})
+            sub = payload.get("sub")
+            if sub:
+                return f"uc:{sub}"
+        except Exception:
+            logger.debug("Rate limit: Bearer 디코딩 실패, IP 주소로 fallback")
+
     token = request.cookies.get("access_token")
     if token:
         try:

@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from db.session import get_db
-from crud.user_crud import get_user_by_email
-from .security import decode_access_token
+from crud.user_crud import get_user_by_email, get_or_create_ucinfo_user
+from crud.department_crud import get_department_by_name
+from .config import settings
+from .security import decode_access_token, decode_ucinfo_token
 
 # ─────────────────────────────────────────────────
 # 1. 선택적 사용자 인증 (페이지 라우터용)
@@ -57,6 +59,13 @@ async def get_current_user(
         detail="인증 정보가 유효하지 않습니다.",
     )
 
+    # ─────────────────────────────────────────────
+    # 2-0. UC Info 앱 Bearer 토큰 (ES256) 우선 처리
+    # ─────────────────────────────────────────────
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return _get_ucinfo_user(db, auth_header[7:], credentials_exception)
+
     # ─────────────────────────────────
     # 2-1. 쿠키에서 액세스 토큰 추출
     # ─────────────────────────────────
@@ -94,4 +103,38 @@ async def get_current_user(
             detail="비활성화된 계정입니다."
         )
 
+    return user
+
+# ─────────────────────────────────────────────────
+# 3. UC Info 앱 사용자 인증 (Bearer, ES256)
+# ─────────────────────────────────────────────────
+# Spring이 발급한 토큰의 sub(학번), dept(학과명)로 섀도 계정을 매핑합니다.
+# dept 클레임이 없는 구 토큰은 401 → 앱이 재로그인하여 새 토큰을 받습니다.
+# ─────────────────────────────────────────────────
+def _get_ucinfo_user(db: Session, token: str, credentials_exception: HTTPException):
+    """
+    UC Info 앱 토큰을 검증하고 대응하는 챗봇 사용자 객체를 반환합니다.
+    """
+    payload = decode_ucinfo_token(token)
+    if payload in ("expired", "invalid"):
+        raise credentials_exception
+
+    student_id: Optional[str] = payload.get("sub")
+    dept_name: Optional[str] = payload.get("dept")
+    if not student_id or not dept_name:
+        raise credentials_exception
+
+    dept = get_department_by_name(db, settings.UCINFO_SCHOOL_ID, dept_name)
+    if not dept:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="챗봇이 지원하지 않는 학과입니다."
+        )
+
+    user = get_or_create_ucinfo_user(db, student_id, dept)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="비활성화된 계정입니다."
+        )
     return user

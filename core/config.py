@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    # UC Info 앱 연동 (ES256 공개키 검증)
+    # 공개키가 비어 있으면 앱 Bearer 인증은 비활성화됩니다.
+    UCINFO_JWT_PUBLIC_KEY: str = ""
+    UCINFO_SCHOOL_ID: int = 0
+
     # ──────────────────────
     # 3. Ollama 모델
     # ──────────────────────
