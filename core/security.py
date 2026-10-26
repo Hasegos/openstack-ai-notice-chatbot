@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from passlib.context import CryptContext
+from cryptography.hazmat.primitives import serialization
 
 from .config import settings
 
@@ -73,4 +74,37 @@ def decode_access_token(token: str):
     
     except jwt.InvalidTokenError:
         # 서명이 일치하지 않거나 구조가 잘못된 토큰일 경우
+        return "invalid"
+
+# ──────────────────────────────────────
+# 4. UC Info 앱 토큰 검증 (ES256 공개키)
+# ──────────────────────────────────────
+def load_ucinfo_public_key(pem_or_base64: str):
+    """
+    PEM 문자열 또는 헤더 없는 Base64(X.509 DER) 공개키를 키 객체로 변환합니다.
+    키 형식이 잘못되면 예외가 발생합니다.
+    """
+    body = pem_or_base64.strip()
+    if "-----BEGIN" not in body:
+        body = f"-----BEGIN PUBLIC KEY-----\n{body}\n-----END PUBLIC KEY-----"
+    return serialization.load_pem_public_key(body.encode())
+
+# 기동 시 1회 로드 — 키가 잘못되면 서버가 뜨지 않도록 해 401 연쇄를 막습니다.
+_UCINFO_PUBLIC_KEY = (
+    load_ucinfo_public_key(settings.UCINFO_JWT_PUBLIC_KEY)
+    if settings.UCINFO_JWT_PUBLIC_KEY else None
+)
+
+def decode_ucinfo_token(token: str):
+    """
+    UC Info(Spring)가 발급한 ES256 토큰을 검증하고 페이로드를 반환합니다.
+    실패 시 decode_access_token과 동일하게 "expired" / "invalid"를 반환합니다.
+    """
+    if _UCINFO_PUBLIC_KEY is None:
+        return "invalid"
+    try:
+        return jwt.decode(token, _UCINFO_PUBLIC_KEY, algorithms=["ES256"])
+    except jwt.ExpiredSignatureError:
+        return "expired"
+    except jwt.InvalidTokenError:
         return "invalid"
